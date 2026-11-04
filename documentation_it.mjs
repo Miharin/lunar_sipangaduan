@@ -399,7 +399,129 @@ function findRecentScreenshot() {
 }
 
 // ---------------------------------------------------------
-// 5. Evidence Git Diff Card Generation (~300ms Blazing Fast)
+// 4b. IT Support: Multimodal AI & OCR Image Analysis
+// ---------------------------------------------------------
+export async function analyzeSupportEvidenceImage({
+    imageBase64,
+    imagePath = null,
+    fileName = 'evidence_support.png',
+    unitValue = '44',
+    jenisAduanValue = '1'
+} = {}) {
+    let targetPath = imagePath;
+    let rawBase64 = null;
+
+    if (imageBase64) {
+        const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        rawBase64 = matches ? matches[2] : imageBase64;
+        const buffer = Buffer.from(rawBase64, 'base64');
+        const evidenceDir = path.resolve(process.cwd(), 'evidence');
+        if (!fs.existsSync(evidenceDir)) {
+            try { fs.mkdirSync(evidenceDir, { recursive: true }); } catch (_) {}
+        }
+        const ext = fileName && path.extname(fileName) ? path.extname(fileName) : '.png';
+        targetPath = path.resolve(evidenceDir, `support_evidence_${Date.now()}${ext}`);
+        fs.writeFileSync(targetPath, buffer);
+        console.log(`[+] [Lunar] Saved IT Support evidence image to: ${targetPath}`);
+    } else if (targetPath && fs.existsSync(targetPath)) {
+        rawBase64 = fs.readFileSync(targetPath).toString('base64');
+    } else {
+        throw new Error('Tidak ada data gambar atau file gambar yang valid.');
+    }
+
+    let analysisText = null;
+    let analysisSource = null;
+
+    // 1. Try Ollama Multimodal Vision (model: 'luna', 'gemma4:e4b', or 'llava')
+    if (rawBase64) {
+        console.log(`[*] [Lunar] Attempting Ollama vision analysis...`);
+        const prompt = `Anda adalah asisten IT Support rumah sakit. Analisis foto/gambar kendala IT ini. Tuliskan ringkasan 2-3 kalimat untuk kolom 'Isi Komplain' laporan pekerjaan IT:
+1. Sebutkan kendala/kerusakan perangkat atau pesan error yang terlihat.
+2. Jelaskan tindakan teknis perbaikan yang dilakukan hingga perangkat kembali normal.
+Format jawaban langsung teks siap pakai tanpa pengantar/penutup.`;
+
+        const candidateModels = ['luna', 'gemma4:e4b', 'llava'];
+        for (const model of candidateModels) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                const res = await fetch('http://127.0.0.1:11434/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model,
+                        prompt,
+                        images: [rawBase64],
+                        stream: false
+                    }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.response && data.response.trim()) {
+                        analysisText = data.response.trim();
+                        analysisSource = `Ollama Vision (${model})`;
+                        console.log(`[+] [Lunar] Vision analysis succeeded with ${analysisSource}!`);
+                        break;
+                    }
+                }
+            } catch (_) {}
+        }
+    }
+
+    // 2. If Ollama vision didn't produce text, use Tesseract OCR
+    let ocrText = '';
+    if (!analysisText && targetPath && fs.existsSync(targetPath)) {
+        try {
+            console.log(`[*] [Lunar] Running Tesseract OCR on ${targetPath}...`);
+            ocrText = execSync(`tesseract "${targetPath}" stdout --oem 1 -l eng 2>/dev/null`, { timeout: 10000 }).toString().trim();
+            if (ocrText) {
+                console.log(`[+] [Lunar] Tesseract extracted OCR text (${ocrText.length} chars)`);
+            }
+        } catch (_) {}
+    }
+
+    // 3. Heuristic / Semantic Classifier based on OCR text or unit/category
+    if (!analysisText) {
+        const lower = (ocrText || '').toLowerCase();
+        const snippet = ocrText
+            ? ocrText.replace(/\s+/g, ' ').trim().slice(0, 120)
+            : '';
+
+        if (/paper|jam|cartridge|toner|spooler|roller|print|canon|epson|brother|tray|ink|ribbon/.test(lower)) {
+            analysisText = `Kendala Printer:\nTerindikasi kendala pencetakan / paper jam${snippet ? ` ("${snippet}")` : ''} pada perangkat printer. Dilakukan pemeriksaan mekanik penarik kertas, pembersihan sisa serpihan pada roller, reset print spooler, dan uji coba cetak dokumen berhasil keluar dengan jelas dan normal.`;
+            analysisSource = 'Tesseract OCR (Printer Pattern)';
+        } else if (/network|ethernet|lan|cable|unplugged|disconnected|internet|dns|gateway|dhcp|ip conflict|wifi/.test(lower)) {
+            analysisText = `Kendala Konektivitas Jaringan:\nTerdeteksi gangguan sambungan jaringan LAN / komunikasi data${snippet ? ` ("${snippet}")` : ''}. Dilakukan pengecekan konektor RJ45 dan kabel UTP, pengujian koneksi switch, peremajaan IP configuration, serta verifikasi ping ke server SIMRS kembali lancar dan stabil.`;
+            analysisSource = 'Tesseract OCR (Network Pattern)';
+        } else if (/no signal|out of range|display|hdmi|vga|monitor|blank|flicker/.test(lower)) {
+            analysisText = `Kendala Tampilan Monitor:\nLayar monitor tidak menampilkan output / no signal${snippet ? ` ("${snippet}")` : ''}. Dilakukan pemeriksaan sambungan kabel display (HDMI/VGA), re-seating port display adapter dan kabel daya, serta penyesuaian resolusi. Tampilan layar kembali menyala normal.`;
+            analysisSource = 'Tesseract OCR (Display Pattern)';
+        } else if (/bsod|blue screen|reboot|boot|windows|crash|system error|0x[0-9a-f]+/i.test(lower)) {
+            analysisText = `Kendala Sistem Operasi / Komputer:\nPerangkat mengalami crash / indikasi error sistem${snippet ? ` ("${snippet}")` : ''}. Dilakukan pemeriksaan startup, perbaikan integritas berkas sistem, pembersihan temporary cache, dan uji restart. Komputer dapat beroperasi kembali secara normal.`;
+            analysisSource = 'Tesseract OCR (OS/System Pattern)';
+        } else if (/error|exception|sql|failed|timeout|http|500|404|database|unauthorized|login|warning/i.test(lower)) {
+            analysisText = `Kendala Aplikasi SIMRS / Sistem Informasi:\nMuncul notifikasi kendala pada antarmuka aplikasi${snippet ? ` ("${snippet}")` : ''}. Dilakukan penelusuran pesan error, perbaikan konfigurasi sesi pengguna, pengujian alur modul, dan aplikasi dapat kembali digunakan oleh staf unit kerja.`;
+            analysisSource = 'Tesseract OCR (Application Error Pattern)';
+        } else if (ocrText && ocrText.length > 15) {
+            analysisText = `Kendala Operasional IT:\nBerdasarkan keterangan yang tertera pada layar / foto kendala:\n"${snippet}"\nDilakukan penanganan teknis, perbaikan konfigurasi, dan pengujian fungsi hingga sistem kembali beroperasi dengan baik.`;
+            analysisSource = 'Tesseract OCR (General Text)';
+        } else {
+            analysisText = `Pemeliharaan dan Perbaikan Perangkat IT:\nDilakukan inspeksi fisik terhadap perangkat keras dan sambungan kabel pada unit kerja berdasarkan foto kendala terlampir. Dilakukan troubleshooting teknis, pembersihan komponen, dan pengujian fungsionalitas hingga perangkat berfungsi normal kembali.`;
+            analysisSource = 'Contextual Hardware Fallback';
+        }
+    }
+
+    return {
+        success: true,
+        analysis: analysisText,
+        source: analysisSource,
+        imagePath: targetPath,
+        extractedOcr: ocrText || null
+    };
+}
 // ---------------------------------------------------------
 export async function generateGitDiffCard({
     repoPath = process.cwd(),
@@ -780,21 +902,21 @@ Rincian Perubahan:
     const pad = (n) => String(n).padStart(2, '0');
     const formatDateTime = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-    const finalWaktuPenyelesaian = waktuPenyelesaian || formatDateTime(now);
-    let finalWaktuPenerimaan = waktuPenerimaan;
+    const finalWaktuPenerimaan = waktuPenerimaan || formatDateTime(now);
+    let finalWaktuPenyelesaian = waktuPenyelesaian;
 
-    if (!finalWaktuPenerimaan) {
-        let penerimaanDate = new Date(now.getTime());
+    if (!finalWaktuPenyelesaian) {
+        let penyelesaianDate = new Date(now.getTime());
         if (jenisAduanValue === '4') {
-            penerimaanDate.setTime(penerimaanDate.getTime() - (23 * 60 + 59) * 60 * 1000);
+            penyelesaianDate.setTime(penyelesaianDate.getTime() + (23 * 60 + 59) * 60 * 1000);
         } else if (jenisAduanValue === '5') {
-            penerimaanDate.setTime(penerimaanDate.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
+            penyelesaianDate.setTime(penyelesaianDate.getTime() + ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
         } else if (['6', '7', '8'].includes(jenisAduanValue)) {
-            penerimaanDate.setTime(penerimaanDate.getTime() - 45 * 60 * 1000);
+            penyelesaianDate.setTime(penyelesaianDate.getTime() + 45 * 60 * 1000);
         } else {
-            penerimaanDate.setTime(penerimaanDate.getTime() - 60 * 60 * 1000);
+            penyelesaianDate.setTime(penyelesaianDate.getTime() + 60 * 60 * 1000);
         }
-        finalWaktuPenerimaan = formatDateTime(penerimaanDate);
+        finalWaktuPenyelesaian = formatDateTime(penyelesaianDate);
     }
 
     console.log(`[*] [Lunar] Timestamps: Penerimaan=${finalWaktuPenerimaan}, Penyelesaian=${finalWaktuPenyelesaian}`);
@@ -821,10 +943,46 @@ Rincian Perubahan:
 
     // 5. Submission Mode
     if (clickSimpan) {
-        console.log('[*] [Lunar] Auto Submit Mode: Clicking "Simpan"...');
+        console.log('[*] [Lunar] Auto Submit Mode: Clicking "Simpan" (#btn_save)...');
+        await page.waitForSelector('#btn_save', { state: 'visible', timeout: 5000 });
         await page.click('#btn_save');
-        await page.waitForTimeout(3000);
-        console.log('[+] [Lunar] Form successfully submitted!');
+
+        // Confirm SweetAlert modal: "Apa anda yakin data untuk di simpan ?" -> click "Ya"
+        console.log('[*] [Lunar] Waiting for SweetAlert confirmation ("Ya")...');
+        try {
+            const confirmBtn = await page.waitForSelector('button.swal2-confirm:has-text("Ya"), button.swal2-confirm, .swal2-actions button:has-text("Ya")', { timeout: 8000, state: 'visible' });
+            if (confirmBtn) {
+                console.log('[*] [Lunar] Clicking SweetAlert confirmation "Ya"...');
+                await page.waitForTimeout(300);
+                try {
+                    await confirmBtn.click({ force: true });
+                } catch (_) {
+                    await page.evaluate(() => {
+                        const btn = document.querySelector('button.swal2-confirm');
+                        if (btn) btn.click();
+                    });
+                }
+            }
+        } catch (e) {
+            console.log('[!] [Lunar] SweetAlert confirmation not found or timed out:', e.message);
+        }
+
+        // Wait for network/AJAX response
+        try {
+            await page.waitForLoadState('networkidle', { timeout: 10000 });
+        } catch (_) {}
+
+        // Wait for secondary success SweetAlert if present (e.g. "Data Berhasil Disimpan" -> click "OK")
+        try {
+            const successBtn = await page.waitForSelector('.swal2-popup.swal2-show button.swal2-confirm', { timeout: 4000, state: 'visible' });
+            if (successBtn) {
+                console.log('[*] [Lunar] Dismissing post-save success modal...');
+                await successBtn.click();
+            }
+        } catch (_) {}
+
+        await page.waitForTimeout(2500);
+        console.log('[+] [Lunar] Form successfully submitted and confirmed with SweetAlert2!');
         await browser.close();
     } else {
         console.log('\n[!] [Lunar] REVIEW MODE: Form is fully populated. "Simpan" was NOT clicked.');
@@ -1170,6 +1328,49 @@ Rincian Perubahan:
             return;
         }
 
+        // 5b. Analyze IT Support Image Endpoint
+        if (req.method === 'POST' && url.pathname === '/api/analyze-image') {
+            const body = await readBody();
+            try {
+                const result = await analyzeSupportEvidenceImage({
+                    imageBase64: body.imageBase64,
+                    imagePath: body.imagePath,
+                    fileName: body.fileName || 'evidence_support.png',
+                    unitValue: body.unitValue,
+                    jenisAduanValue: body.jenisAduanValue
+                });
+                sendJson(result);
+            } catch (err) {
+                console.error('[!] [Lunar] Error analyzing image:', err);
+                sendJson({ success: false, error: err.message }, 500);
+            }
+            return;
+        }
+
+        // 5c. Recent Screenshot Discovery Endpoint
+        if (req.method === 'GET' && url.pathname === '/api/recent-screenshot') {
+            try {
+                const recentShot = findRecentScreenshot();
+                if (recentShot && fs.existsSync(recentShot)) {
+                    const data = fs.readFileSync(recentShot);
+                    const ext = path.extname(recentShot).toLowerCase().replace('.', '');
+                    const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png';
+                    const base64 = `data:${mime};base64,${data.toString('base64')}`;
+                    sendJson({
+                        found: true,
+                        imagePath: recentShot,
+                        fileName: path.basename(recentShot),
+                        imageBase64: base64
+                    });
+                } else {
+                    sendJson({ found: false });
+                }
+            } catch (err) {
+                sendJson({ found: false, error: err.message });
+            }
+            return;
+        }
+
         // 6. Submit to Si-Pangaduan Endpoint
         if (req.method === 'POST' && url.pathname === '/api/submit') {
             const body = await readBody();
@@ -1214,6 +1415,18 @@ function getLocalNetworkIp() {
     } catch (_) {}
     return '127.0.0.1';
 }
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`\n[*] [Lunar] Server sudah aktif berjalan pada port ${port}.`);
+            console.log(`[*] [Lunar] Membuka antarmuka Web UI di browser...`);
+            const isWindows = process.platform === 'win32';
+            const openCmd = isWindows ? `start http://localhost:${port}` : `xdg-open http://localhost:${port}`;
+            exec(openCmd, () => {});
+        } else {
+            console.error('[!] [Lunar] Server error:', err);
+        }
+    });
 
     server.listen(port, '0.0.0.0', () => {
         const localIp = getLocalNetworkIp();

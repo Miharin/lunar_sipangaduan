@@ -813,9 +813,11 @@
             background: rgba(12, 10, 18, 0.5);
         }
 
-        .dropzone:hover {
+        .dropzone:hover,
+        .dropzone.drag-over {
             border-color: var(--crimson-glow);
-            background: rgba(225, 29, 72, 0.04);
+            background: rgba(225, 29, 72, 0.08);
+            box-shadow: 0 0 16px rgba(225, 29, 72, 0.15);
         }
     </style>
 </head>
@@ -944,9 +946,13 @@
                             <span style="font-size:12px; font-weight:700;">⏱️ Waktu Pengerjaan</span>
                             <span class="time-badge" id="badge-duration">23h 59m Delta</span>
                         </div>
-                        <div style="display:flex; gap:3px; background:rgba(0,0,0,0.35); padding:2px; border-radius:8px; border:1px solid var(--border-subtle);">
-                            <button type="button" id="btn-time-auto" class="btn-mini btn-mini-primary" style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('auto')">⚡ Auto</button>
-                            <button type="button" id="btn-time-manual" class="btn-mini btn-mini-secondary" style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('manual')">✏️ Manual</button>
+                        <div
+                            style="display:flex; gap:3px; background:rgba(0,0,0,0.35); padding:2px; border-radius:8px; border:1px solid var(--border-subtle);">
+                            <button type="button" id="btn-time-auto" class="btn-mini btn-mini-primary"
+                                style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('auto')">⚡ Auto</button>
+                            <button type="button" id="btn-time-manual" class="btn-mini btn-mini-secondary"
+                                style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('manual')">✏️
+                                Manual</button>
                         </div>
                     </div>
 
@@ -965,26 +971,36 @@
                     <!-- Manual Mode Display -->
                     <div id="box-time-manual" style="display:none; flex-direction:column; gap:8px;">
                         <div style="display:flex; flex-direction:column; gap:3px;">
-                            <label style="font-size:11px; color:var(--text-sub); display:flex; justify-content:space-between;">
+                            <label
+                                style="font-size:11px; color:var(--text-sub); display:flex; justify-content:space-between;">
                                 <span>Waktu Penerimaan (Tanggal & Jam):</span>
-                                <span style="font-size:10px; color:var(--text-muted);">Format: YYYY-MM-DD HH:mm</span>
+                                <button type="button" class="btn-icon-subtle"
+                                    style="font-size:10px; padding:0 4px; color:#6ee7b7;"
+                                    onclick="setManualPenerimaanToNow()">⏰ Set Sekarang</button>
                             </label>
                             <input type="datetime-local" id="input-manual-penerimaan" class="input-text"
                                 style="padding:6px 10px; font-size:12px; font-family:'JetBrains Mono', monospace;"
                                 oninput="onManualTimestampChange()">
                         </div>
                         <div style="display:flex; flex-direction:column; gap:3px;">
-                            <label style="font-size:11px; color:var(--text-sub); display:flex; justify-content:space-between;">
+                            <label
+                                style="font-size:11px; color:var(--text-sub); display:flex; justify-content:space-between;">
                                 <span>Waktu Penyelesaian (Tanggal & Jam):</span>
-                                <button type="button" class="btn-icon-subtle" style="font-size:10px; padding:0 4px; color:#6ee7b7;" onclick="setManualTimeToNow()">⏰ Set Sekarang</button>
+                                <button type="button" class="btn-icon-subtle"
+                                    style="font-size:10px; padding:0 4px; color:#6ee7b7;"
+                                    onclick="setManualPenyelesaianToNow()">⏰ Set Sekarang</button>
                             </label>
                             <input type="datetime-local" id="input-manual-penyelesaian" class="input-text"
                                 style="padding:6px 10px; font-size:12px; font-family:'JetBrains Mono', monospace;"
                                 oninput="onManualTimestampChange()">
                         </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:6px; border-top:1px dashed var(--border-subtle);">
-                            <span id="manual-time-warning" style="font-size:11px; color:var(--text-muted);">Pilih tanggal & jam manual</span>
-                            <button type="button" class="btn-mini btn-mini-secondary" style="font-size:10.5px; padding:2px 8px;" onclick="syncManualFromAuto()">🔄 Reset ke Auto Delta</button>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:6px; border-top:1px dashed var(--border-subtle);">
+                            <span id="manual-time-warning" style="font-size:11px; color:var(--text-muted);">Pilih
+                                tanggal & jam manual</span>
+                            <button type="button" class="btn-mini btn-mini-secondary"
+                                style="font-size:10.5px; padding:2px 8px;" onclick="syncManualFromAuto()">🔄 Reset ke
+                                Auto Delta</button>
                         </div>
                     </div>
                 </div>
@@ -1004,16 +1020,21 @@
 
                 <!-- Programmer Project & Commit Card -->
                 <div id="programmer-project-card" class="project-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="font-size:12.5px; font-weight:700; color:var(--text-main);">📁 Project / Repositori:</span>
-                            <span id="badge-active-repo" class="pill" style="color:#a78bfa; border-color:rgba(167, 139, 250, 0.35); font-weight:700; background:rgba(167, 139, 250, 0.1);">fe_remedis_ranap</span>
+                            <span style="font-size:12.5px; font-weight:700; color:var(--text-main);">📁 Project /
+                                Repositori:</span>
+                            <span id="badge-active-repo" class="pill"
+                                style="color:#a78bfa; border-color:rgba(167, 139, 250, 0.35); font-weight:700; background:rgba(167, 139, 250, 0.1);">fe_remedis_ranap</span>
                         </div>
-                        <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="openProjectModal()">
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:11px;"
+                            onclick="openProjectModal()">
                             📂 Ganti Project / Path Lain
                         </button>
                     </div>
-                    <div class="project-path-line" id="preview-repo-path" onclick="openProjectModal()" title="Klik untuk mengubah path repositori">
+                    <div class="project-path-line" id="preview-repo-path" onclick="openProjectModal()"
+                        title="Klik untuk mengubah path repositori">
                         /home/miharin/Documents/Project/fe_remedis_ranap
                     </div>
                     <div id="programmer-banner" class="pill"
@@ -1055,15 +1076,17 @@
                         placeholder="Tuliskan rincian perbaikan atau pekerjaan IT..."></textarea>
                 </div>
 
-                <!-- Evidence Section -->
-                <div class="field-group">
+                <!-- Programmer Evidence Section (Diff Card & Raw Diff) -->
+                <div id="programmer-evidence-section" class="field-group">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <div style="display:flex; gap:6px;">
-                            <button id="tab-diff-card" type="button" class="btn-mini btn-mini-primary" onclick="switchEvidenceTab('card')">🖼️ Diff Card</button>
-                            <button id="tab-diff-raw" type="button" class="btn-mini btn-mini-secondary" onclick="switchEvidenceTab('raw')">📄 Raw Git Diff</button>
+                            <button id="tab-diff-card" type="button" class="btn-mini btn-mini-primary"
+                                onclick="switchEvidenceTab('card')">🖼️ Diff Card</button>
+                            <button id="tab-diff-raw" type="button" class="btn-mini btn-mini-secondary"
+                                onclick="switchEvidenceTab('raw')">📄 Raw Git Diff</button>
                         </div>
-                        <button id="btn-regen-card" type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size:11px;"
-                            onclick="generateDiffCard()">
+                        <button id="btn-regen-card" type="button" class="btn btn-secondary"
+                            style="padding: 4px 10px; font-size:11px;" onclick="generateDiffCard()">
                             ⚡ Regenerate Card
                         </button>
                     </div>
@@ -1076,18 +1099,100 @@
                     </div>
 
                     <div id="diff-raw-container" style="display:none;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <span style="font-size:11px; color:var(--text-sub);" id="raw-diff-commit-label">Commit diff</span>
-                            <button type="button" class="btn-mini btn-mini-secondary" onclick="fetchRawDiff()">🔄 Muat Ulang Diff</button>
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:11px; color:var(--text-sub);" id="raw-diff-commit-label">Commit
+                                diff</span>
+                            <button type="button" class="btn-mini btn-mini-secondary" onclick="fetchRawDiff()">🔄 Muat
+                                Ulang Diff</button>
                         </div>
-                        <pre id="diff-raw-text" style="background:#09080e; color:#e2e8f0; padding:12px; border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5; max-height:360px; overflow:auto; white-space:pre-wrap; border:1px solid var(--border-subtle);"></pre>
+                        <pre id="diff-raw-text"
+                            style="background:#09080e; color:#e2e8f0; padding:12px; border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5; max-height:360px; overflow:auto; white-space:pre-wrap; border:1px solid var(--border-subtle);"></pre>
+                    </div>
+                </div>
+
+                <!-- IT Support Evidence Section (Photo Upload, Screenshot Discovery & AI Vision Analysis) -->
+                <div id="support-evidence-section" class="field-group" style="display:none;">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:12px; font-weight:700; color:var(--text-main);">📸 Foto Bukti Kendala
+                                Hardware / IT</span>
+                            <span id="badge-support-status" class="pill"
+                                style="display:none; font-size:10.5px; color:#6ee7b7; border-color:rgba(110,231,183,0.3);">Foto
+                                Terlampir</span>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button type="button" id="btn-fetch-recent-shot" class="btn-mini btn-mini-secondary"
+                                style="padding:3px 8px; font-size:11px;" onclick="checkRecentScreenshot()">
+                                📸 Screenshot Terakhir
+                            </button>
+                            <button type="button" id="btn-reanalyze-support" class="btn-mini btn-mini-primary"
+                                style="display:none; padding:3px 8px; font-size:11px;"
+                                onclick="triggerAnalyzeSupportImage()">
+                                🔍 Analisis Ulang AI
+                            </button>
+                            <button type="button" id="btn-clear-support-img" class="btn-mini btn-mini-secondary"
+                                style="display:none; padding:3px 8px; font-size:11px; color:#fb7185;"
+                                onclick="clearSupportImage()">
+                                🗑️ Hapus Foto
+                            </button>
+                        </div>
                     </div>
 
-                    <div id="support-upload-container" style="display:none;" class="dropzone"
+                    <!-- Dropzone when no photo is active -->
+                    <div id="support-upload-container" class="dropzone"
                         onclick="document.getElementById('file-upload').click()">
                         <input type="file" id="file-upload" style="display:none;" accept="image/*"
-                            onchange="handleManualFile(this.files[0])">
-                        <p id="label-upload-status">📸 Klik atau Drag & Drop foto bukti di sini (Opsional)</p>
+                            onchange="handleSupportFileInput(this.files[0])">
+                        <div
+                            style="display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;">
+                            <span style="font-size:32px;">📷</span>
+                            <p id="label-upload-status"
+                                style="font-weight:700; font-size:13px; color:var(--text-main); margin:0;">
+                                Klik atau Drag & Drop Foto Bukti di Sini
+                            </p>
+                            <p style="font-size:11.5px; color:var(--text-sub); margin:0;">
+                                Atau langsung tekan <kbd
+                                    style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; color:var(--crimson-light);">Ctrl
+                                    + V</kbd> untuk paste screenshot!
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Preview Container when photo is active -->
+                    <div id="support-preview-container"
+                        style="display:none; flex-direction:column; gap:10px; background:rgba(0,0,0,0.35); border:1px solid var(--border-subtle); border-radius:12px; padding:12px;">
+                        <div
+                            style="position:relative; width:100%; max-height:320px; overflow:hidden; border-radius:8px; display:flex; justify-content:center; align-items:center; background:#08070d; border:1px solid rgba(255,255,255,0.05);">
+                            <img id="support-preview-img"
+                                style="max-width:100%; max-height:320px; object-fit:contain; border-radius:6px;"
+                                alt="Bukti Foto Kendala IT">
+
+                            <!-- Analysis In-Progress Overlay -->
+                            <div id="support-analyzing-overlay"
+                                style="display:none; position:absolute; inset:0; background:rgba(9,8,14,0.85); backdrop-filter:blur(3px); flex-direction:column; justify-content:center; align-items:center; gap:10px;">
+                                <div class="spinner" style="width:28px; height:28px; border-width:3px;"></div>
+                                <span style="font-size:13px; font-weight:700; color:var(--crimson-light);">🤖
+                                    Menganalisis foto kendala...</span>
+                                <span style="font-size:11px; color:var(--text-muted);">Mendeteksi trouble & menyusun
+                                    ringkasan ke Isi Komplain</span>
+                            </div>
+                        </div>
+
+                        <!-- Footer Info -->
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:11px; border-top:1px dashed var(--border-subtle); padding-top:8px;">
+                            <div style="display:flex; align-items:center; gap:6px; color:var(--text-muted);">
+                                <span>📄</span>
+                                <span id="support-img-name"
+                                    style="font-family:'JetBrains Mono',monospace;">evidence.png</span>
+                            </div>
+                            <span id="support-ai-badge" class="pill"
+                                style="color:#6ee7b7; border-color:rgba(110,231,183,0.3); font-size:10.5px;">
+                                ✨ Dianalisis oleh Lunar Vision
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1233,7 +1338,8 @@
             <div class="field-group">
                 <label class="field-label" for="select-tpl-jenis">
                     <span>Jenis Aduan</span>
-                    <span id="badge-tpl-jenis-count" style="font-size:11px; color:var(--text-sub);">Pilih Jenis Aduan</span>
+                    <span id="badge-tpl-jenis-count" style="font-size:11px; color:var(--text-sub);">Pilih Jenis
+                        Aduan</span>
                 </label>
                 <div class="search-select-wrapper" id="combobox-tpl-jenis">
                     <div class="search-select-trigger" id="trigger-tpl-jenis" onclick="toggleDropdown('tpl-jenis')">
@@ -1244,8 +1350,8 @@
                         <div class="search-box-container">
                             <span>🔍</span>
                             <input type="text" class="search-box-input" id="search-tpl-jenis"
-                                placeholder="Cari jenis aduan..."
-                                oninput="filterOptions('tpl-jenis', this.value)" autocomplete="off">
+                                placeholder="Cari jenis aduan..." oninput="filterOptions('tpl-jenis', this.value)"
+                                autocomplete="off">
                             <button type="button" class="search-box-clear" onclick="clearSearch('tpl-jenis')">✕</button>
                         </div>
                         <div class="search-options-list" id="list-tpl-jenis"></div>
@@ -1263,7 +1369,8 @@
 
             <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
                 <button class="btn btn-secondary" onclick="closeAddTemplateModal()">Batal</button>
-                <button id="btn-save-tpl" class="btn btn-primary" onclick="saveNewTemplate()">💾 Simpan Template</button>
+                <button id="btn-save-tpl" class="btn btn-primary" onclick="saveNewTemplate()">💾 Simpan
+                    Template</button>
             </div>
         </div>
     </div>
@@ -1271,9 +1378,11 @@
     <!-- Modal Switch Project / Path -->
     <div class="modal-overlay" id="modal-switch-project" style="display:none;">
         <div class="modal-content" style="max-width:540px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
                 <h3 style="font-size:16px; font-weight:700;">📂 Pilih / Ganti Repositori Project</h3>
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="closeProjectModal()">✕</button>
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
+                    onclick="closeProjectModal()">✕</button>
             </div>
 
             <!-- Quick Pick Sibling Projects -->
@@ -1282,7 +1391,8 @@
                     <span>Project yang Ditemukan (Folder Tetangga)</span>
                     <span style="font-size:11px; color:var(--text-sub);">Auto-Discovered</span>
                 </label>
-                <div id="discovered-projects-list" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding-right:4px;">
+                <div id="discovered-projects-list"
+                    style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding-right:4px;">
                     <!-- Populated dynamically via JS -->
                 </div>
             </div>
@@ -1293,14 +1403,16 @@
                     <span>Ketik atau Paste Path Repositori Lain</span>
                     <span style="font-size:11px; color:var(--crimson-light);">Linux / Windows</span>
                 </label>
-                <input type="text" id="input-custom-repo-path" class="input-text" placeholder="Misal: /home/miharin/Documents/Project/nama_project atau D:\Projects\...">
+                <input type="text" id="input-custom-repo-path" class="input-text"
+                    placeholder="Misal: /home/miharin/Documents/Project/nama_project atau D:\Projects\...">
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
                 <span id="project-switch-status" style="font-size:12px; color:var(--text-muted);"></span>
                 <div style="display:flex; gap:10px;">
                     <button class="btn btn-secondary" onclick="closeProjectModal()">Batal</button>
-                    <button class="btn btn-primary" onclick="submitCustomProjectPath()">🚀 Beralih ke Project Ini</button>
+                    <button class="btn btn-primary" onclick="submitCustomProjectPath()">🚀 Beralih ke Project
+                        Ini</button>
                 </div>
             </div>
         </div>
@@ -1350,6 +1462,7 @@
                 updateProjectDisplay();
                 generateDiffCard();
                 updateTimestamps();
+                setupSupportImageEvents();
             } catch (err) {
                 console.error('Failed to init:', err);
             }
@@ -2067,12 +2180,27 @@
             document.getElementById('tab-support').classList.toggle('active', !isProg);
             document.getElementById('badge-track').textContent = isProg ? 'Programmer' : 'IT Support';
 
-            document.getElementById('programmer-banner').style.display = isProg ? 'flex' : 'none';
+            // Programmer project card completely hidden in IT Support!
+            const projectCard = document.getElementById('programmer-project-card');
+            if (projectCard) projectCard.style.display = isProg ? 'block' : 'none';
+
+            const progBanner = document.getElementById('programmer-banner');
+            if (progBanner) progBanner.style.display = isProg ? 'flex' : 'none';
+
+            // Header title reflects current track
+            const labelTitle = document.getElementById('label-content-title');
+            if (labelTitle) labelTitle.textContent = isProg ? '💻 Uraian Pekerjaan & Git Diff Evidence' : '🛠️ Uraian Trouble & Bukti Foto Perangkat';
+
             document.getElementById('btn-ai-generate').style.display = isProg ? 'inline-block' : 'none';
             document.getElementById('templates-section').style.display = 'flex';
-            document.getElementById('diff-card-container').style.display = isProg ? 'block' : 'none';
-            document.getElementById('btn-regen-card').style.display = isProg ? 'inline-block' : 'none';
-            document.getElementById('support-upload-container').style.display = isProg ? 'none' : 'block';
+
+            // Programmer Diff section completely hidden in IT Support!
+            const progDiffSection = document.getElementById('programmer-evidence-section');
+            if (progDiffSection) progDiffSection.style.display = isProg ? 'block' : 'none';
+
+            // IT Support Evidence section shown in IT Support!
+            const suppSection = document.getElementById('support-evidence-section');
+            if (suppSection) suppSection.style.display = isProg ? 'none' : 'block';
 
             filterTemplatesByTrack(isProg ? 'programmer' : 'it_support');
 
@@ -2167,12 +2295,24 @@
             onManualTimestampChange();
         }
 
-        function setManualTimeToNow() {
+        function setManualPenerimaanToNow() {
+            const inputPen = document.getElementById('input-manual-penerimaan');
+            if (inputPen) {
+                inputPen.value = dateToDateTimeLocalString(new Date());
+                onManualTimestampChange();
+            }
+        }
+
+        function setManualPenyelesaianToNow() {
             const inputSel = document.getElementById('input-manual-penyelesaian');
             if (inputSel) {
                 inputSel.value = dateToDateTimeLocalString(new Date());
                 onManualTimestampChange();
             }
+        }
+
+        function setManualTimeToNow() {
+            setManualPenerimaanToNow();
         }
 
         function onManualTimestampChange() {
@@ -2214,22 +2354,23 @@
             const jenisVal = jenisSelect ? jenisSelect.value : '4';
             const now = new Date();
 
-            autoPenyelesaianDate = new Date(now.getTime());
+            // Waktu Penerimaan is current day and time!
             autoPenerimaanDate = new Date(now.getTime());
+            autoPenyelesaianDate = new Date(now.getTime());
 
             let deltaLabel = '1h Delta';
 
             if (jenisVal === '4') {
-                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - (23 * 60 + 59) * 60 * 1000);
+                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + (23 * 60 + 59) * 60 * 1000);
                 deltaLabel = '23h 59m Delta';
             } else if (jenisVal === '5') {
-                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
+                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
                 deltaLabel = '3d 23h 59m Delta';
             } else if (['6', '7', '8'].includes(jenisVal)) {
-                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - 45 * 60 * 1000);
+                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + 45 * 60 * 1000);
                 deltaLabel = '45m Delta';
             } else {
-                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - 60 * 60 * 1000);
+                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + 60 * 60 * 1000);
                 deltaLabel = '1h Delta';
             }
 
@@ -2359,10 +2500,216 @@
             }
         }
 
-        function handleManualFile(file) {
+        let currentSupportImageBase64 = null;
+        let currentSupportImageName = null;
+
+        function handleSupportFileInput(file) {
             if (!file) return;
-            evidenceImagePath = file.name;
-            document.getElementById('label-upload-status').textContent = `✅ Terpilih: ${file.name}`;
+            handleSupportImage(file);
+        }
+
+        // Backward compatibility
+        function handleManualFile(file) {
+            handleSupportImage(file);
+        }
+
+        async function handleSupportImage(file) {
+            if (!file) return;
+            if (!file.type || !file.type.startsWith('image/')) {
+                alert('Silakan pilih file gambar (PNG, JPG, JPEG, WEBP).');
+                return;
+            }
+
+            currentSupportImageName = file.name || 'screenshot.png';
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const dataUrl = e.target.result;
+                currentSupportImageBase64 = dataUrl;
+
+                // Show preview
+                const previewImg = document.getElementById('support-preview-img');
+                const previewContainer = document.getElementById('support-preview-container');
+                const uploadContainer = document.getElementById('support-upload-container');
+                const btnReanalyze = document.getElementById('btn-reanalyze-support');
+                const btnClear = document.getElementById('btn-clear-support-img');
+                const badgeStatus = document.getElementById('badge-support-status');
+                const nameLabel = document.getElementById('support-img-name');
+
+                if (previewImg) previewImg.src = dataUrl;
+                if (previewContainer) previewContainer.style.display = 'flex';
+                if (uploadContainer) uploadContainer.style.display = 'none';
+                if (btnReanalyze) btnReanalyze.style.display = 'inline-block';
+                if (btnClear) btnClear.style.display = 'inline-block';
+                if (badgeStatus) badgeStatus.style.display = 'inline-flex';
+                if (nameLabel) nameLabel.textContent = currentSupportImageName;
+
+                // Analyze with AI and put result into Isi Komplain
+                await analyzeCurrentImage(dataUrl, currentSupportImageName);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function analyzeCurrentImage(dataUrl, fileName) {
+            const overlay = document.getElementById('support-analyzing-overlay');
+            const aiBadge = document.getElementById('support-ai-badge');
+            const footerStatus = document.getElementById('footer-status');
+
+            if (overlay) overlay.style.display = 'flex';
+            if (aiBadge) {
+                aiBadge.style.color = 'var(--crimson-light)';
+                aiBadge.textContent = '⏳ Menganalisis...';
+            }
+            if (footerStatus) footerStatus.textContent = '🔍 Menganalisis foto kendala IT...';
+
+            try {
+                const res = await fetch('/api/analyze-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: dataUrl,
+                        fileName: fileName || 'evidence_support.png',
+                        unitValue: document.getElementById('select-unit').value,
+                        jenisAduanValue: document.getElementById('select-jenis').value
+                    })
+                });
+                const data = await res.json();
+                if (overlay) overlay.style.display = 'none';
+
+                if (data.success && data.analysis) {
+                    document.getElementById('textarea-komplain').value = data.analysis;
+                    evidenceImagePath = data.imagePath;
+
+                    if (aiBadge) {
+                        aiBadge.style.color = '#6ee7b7';
+                        aiBadge.textContent = `✨ ${data.source || 'Lunar Vision'}`;
+                    }
+                    if (footerStatus) footerStatus.textContent = '✅ Foto berhasil dianalisis & dimasukkan ke Isi Komplain!';
+                } else {
+                    if (aiBadge) {
+                        aiBadge.style.color = '#fb7185';
+                        aiBadge.textContent = '⚠️ Gagal menganalisis';
+                    }
+                    if (footerStatus) footerStatus.textContent = '⚠️ Gagal menganalisis gambar: ' + (data.error || 'Unknown error');
+                }
+            } catch (err) {
+                if (overlay) overlay.style.display = 'none';
+                if (aiBadge) {
+                    aiBadge.style.color = '#fb7185';
+                    aiBadge.textContent = '⚠️ Error koneksi';
+                }
+                console.error('[!] Error analyzing image:', err);
+            }
+        }
+
+        function triggerAnalyzeSupportImage() {
+            if (currentSupportImageBase64) {
+                analyzeCurrentImage(currentSupportImageBase64, currentSupportImageName);
+            }
+        }
+
+        function clearSupportImage() {
+            currentSupportImageBase64 = null;
+            currentSupportImageName = null;
+            evidenceImagePath = null;
+
+            const previewImg = document.getElementById('support-preview-img');
+            const previewContainer = document.getElementById('support-preview-container');
+            const uploadContainer = document.getElementById('support-upload-container');
+            const btnReanalyze = document.getElementById('btn-reanalyze-support');
+            const btnClear = document.getElementById('btn-clear-support-img');
+            const badgeStatus = document.getElementById('badge-support-status');
+            const fileInput = document.getElementById('file-upload');
+
+            if (previewImg) previewImg.src = '';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (uploadContainer) uploadContainer.style.display = 'block';
+            if (btnReanalyze) btnReanalyze.style.display = 'none';
+            if (btnClear) btnClear.style.display = 'none';
+            if (badgeStatus) badgeStatus.style.display = 'none';
+            if (fileInput) fileInput.value = '';
+        }
+
+        async function checkRecentScreenshot() {
+            const footerStatus = document.getElementById('footer-status');
+            if (footerStatus) footerStatus.textContent = '🔍 Mencari screenshot terbaru di sistem...';
+            try {
+                const res = await fetch('/api/recent-screenshot');
+                const data = await res.json();
+                if (data.found && data.imageBase64) {
+                    currentSupportImageName = data.fileName;
+                    currentSupportImageBase64 = data.imageBase64;
+                    evidenceImagePath = data.imagePath;
+
+                    const previewImg = document.getElementById('support-preview-img');
+                    const previewContainer = document.getElementById('support-preview-container');
+                    const uploadContainer = document.getElementById('support-upload-container');
+                    const btnReanalyze = document.getElementById('btn-reanalyze-support');
+                    const btnClear = document.getElementById('btn-clear-support-img');
+                    const badgeStatus = document.getElementById('badge-support-status');
+                    const nameLabel = document.getElementById('support-img-name');
+
+                    if (previewImg) previewImg.src = data.imageBase64;
+                    if (previewContainer) previewContainer.style.display = 'flex';
+                    if (uploadContainer) uploadContainer.style.display = 'none';
+                    if (btnReanalyze) btnReanalyze.style.display = 'inline-block';
+                    if (btnClear) btnClear.style.display = 'inline-block';
+                    if (badgeStatus) badgeStatus.style.display = 'inline-flex';
+                    if (nameLabel) nameLabel.textContent = data.fileName;
+
+                    await analyzeCurrentImage(data.imageBase64, data.fileName);
+                } else {
+                    alert('Tidak ditemukan screenshot baru dalam 30 menit terakhir di folder Pictures/Screenshots.');
+                    if (footerStatus) footerStatus.textContent = 'Siap Mengisi Formulir';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Gagal mengambil screenshot terbaru.');
+            }
+        }
+
+        function setupSupportImageEvents() {
+            const dropzone = document.getElementById('support-upload-container');
+            if (dropzone) {
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.add('drag-over');
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        dropzone.classList.remove('drag-over');
+                    }, false);
+                });
+
+                dropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files.length > 0) {
+                        handleSupportImage(files[0]);
+                    }
+                }, false);
+            }
+
+            window.addEventListener('paste', (e) => {
+                if (currentTrack !== 'it_support') return;
+                const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
+                if (!items) return;
+
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type && items[i].type.startsWith('image/')) {
+                        e.preventDefault();
+                        const blob = items[i].getAsFile();
+                        handleSupportImage(blob);
+                        return;
+                    }
+                }
+            });
         }
 
         function copyKomplainText() {
