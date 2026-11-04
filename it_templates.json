@@ -1,0 +1,123 @@
+[
+  {
+    "id": "jaringan_it_internal",
+    "icon": "🌐",
+    "title": "Perbaikan & Pemeliharaan Jaringan IT",
+    "track": "both",
+    "unitValue": "145",
+    "unitName": "Inst. INFORMASI TEKNOLOGI ( IT )",
+    "jenisValue": "6",
+    "jenisName": "Perbaikan Jaringan",
+    "text": "Pemeliharaan dan perbaikan koneksi jaringan lokal internal Instalasi Teknologi Informasi (IT), konfigurasi switch switch manage, monitoring latensi gateway SIMRS, serta pengetesan throughput link server RME."
+  },
+  {
+    "id": "ranap_rme",
+    "icon": "🩺",
+    "title": "Perbaikan Modul RME Rawat Inap",
+    "track": "both",
+    "unitValue": "44",
+    "unitName": "Inst. Rekam Medik",
+    "jenisValue": "4",
+    "jenisName": "Perbaikan Aplikasi",
+    "text": "Perbaikan dan penyesuaian fungsionalitas modul Rekam Medis Elektronik (RME) Rawat Inap (fe_remedis_ranap), pemisahan opsi checklist asuhan anestesi, evaluasi jalan napas, dan penyesuaian surat keterangan kematian."
+  },
+  {
+    "id": "modul_simrs",
+    "icon": "🏛️",
+    "title": "Pembuatan Modul Baru SIMRS",
+    "track": "both",
+    "unitValue": "44",
+    "unitName": "Inst. Rekam Medik",
+    "jenisValue": "5",
+    "jenisName": "Pembuatan Modul SimRS",
+    "text": "Pengembangan modul baru SIMRS rumah sakit, integrasi antarmuka frontend dengan backend database, validasi hak akses pengguna, serta pengujian User Acceptance Test (UAT) modul."
+  },
+  {
+    "id": "printer_kasir",
+    "icon": "🖨️",
+    "title": "Printer Kasir / Pendaftaran Macet",
+    "track": "both",
+    "unitValue": "72",
+    "unitName": "Kasir",
+    "jenisValue": "7",
+    "jenisName": "Perbaikan Hardware dan OS",
+    "text": "Pembersihan roller penarik kertas printer kasir yang mengalami paper jam, pengetesan print test page struk kasir, dan penggantian roll pita/kertas baru. Printer telah berfungsi normal kembali."
+  },
+  {
+    "id": "kabel_lan",
+    "icon": "🌐",
+    "title": "Koneksi LAN Terputus / Crimping RJ45",
+    "track": "both",
+    "unitValue": "84",
+    "unitName": "Pav. Anggrek",
+    "jenisValue": "6",
+    "jenisName": "Perbaikan Jaringan",
+    "text": "Pengecekan kabel UTP LAN yang tidak terhubung (unplugged) di nurse station, crimping ulang konektor RJ-45, pengetesan ping ke gateway SIMRS dan server utama (0% packet loss). Koneksi internet & RME stabil."
+  },
+  {
+    "id": "reset_akun",
+    "icon": "🔑",
+    "title": "Reset Password & Akun User Terkunci",
+    "track": "both",
+    "unitValue": "28",
+    "unitName": "Inst. IGD",
+    "jenisValue": "1",
+    "jenisName": "Penanganan Komplain",
+    "text": "Reset password akun user dokter/perawat yang terkunci akibat salah input berulang. Melakukan verifikasi hak akses peranan (role-based access) di SIMRS dan uji coba login berhasil."
+  },
+  {
+    "id": "ganti_toner",
+    "icon": "📦",
+    "title": "Penggantian Cartridge Toner Pudar",
+    "track": "it_support",
+    "unitValue": "44",
+    "unitName": "Inst. Rekam Medik",
+    "jenisValue": "7",
+    "jenisName": "Perbaikan Hardware dan OS",
+    "text": "Penggantian cartridge toner laserjet yang hasil cetaknya pudar/bergaris di bagian administrasi rekam medik. Dilakukan kalibrasi drum dan cetak lembar uji coba dengan hasil cetak jelas dan pekat."
+  },
+  {
+    "id": "pc_lemot",
+    "icon": "🖥️",
+    "title": "Optimalisasi PC Lemot & Clear Cache",
+    "track": "both",
+    "unitValue": "31",
+    "unitName": "Inst. Farmasi",
+    "jenisValue": "7",
+    "jenisName": "Perbaikan Hardware dan OS",
+    "text": "Pembersihan temporary files, cache browser RME, disable startup services yang tidak diperlukan, serta pengecekan suhu CPU dan memory utilization. PC kasir farmasi kembali responsif dan lancar."
+  },
+  {
+    "id": "setup_pc",
+    "icon": "🔌",
+    "title": "Setup & Instalasi PC Ruangan Baru",
+    "track": "both",
+    "unitValue": "29",
+    "unitName": "Inst. Bedah Sentral",
+    "jenisValue": "7",
+    "jenisName": "Perbaikan Hardware dan OS",
+    "text": "Setup workstation baru meliputi instalasi sistem operasi, joining domain LAN internal rumah sakit, instalasi printer driver, dan konfigurasi shortcut RME & browser. Workstation siap operasional."
+  },
+  {
+    "id": "wifi_ap",
+    "icon": "📡",
+    "title": "Restart & Perbaikan WiFi Access Point",
+    "track": "both",
+    "unitValue": "87",
+    "unitName": "Pav. Bougenville",
+    "jenisValue": "6",
+    "jenisName": "Perbaikan Jaringan",
+    "text": "Pengecekan sinyal WiFi drop di area rawat inap, restart POE injector Access Point, dan re-binding IP static. Sinyal WiFi dan koneksi tablet dokter visite kembali lancar."
+  },
+  {
+    "id": "stok_farmasi",
+    "icon": "💊",
+    "title": "Sinkronisasi Transaksi Resep Farmasi",
+    "track": "both",
+    "unitValue": "31",
+    "unitName": "Inst. Farmasi",
+    "jenisValue": "3",
+    "jenisName": "Perbaikan Stok Obat Farmasi",
+    "text": "Pengecekan antrean e-resep yang tertahan di modul farmasi rawat jalan, re-index antrean resep, dan verifikasi mutasi stok obat telah sinkron dengan billing kasir."
+  }
+]

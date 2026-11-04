@@ -1,0 +1,1991 @@
+<!--
+          (\__/)
+          (˶ᵔ ᵕ ᵔ˶)  < "Lunar Territory."
+         / >[CRIMSON+]>   "Hands off, unless you're Miharin."
+-->
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌙 Lunar IT Documentation Portal • Si-Pangaduan</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #09080e;
+            --bg-surface: #120f1a;
+            --bg-card: rgba(23, 19, 33, 0.75);
+            --bg-card-hover: rgba(30, 25, 43, 0.95);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-active: rgba(225, 29, 72, 0.4);
+            --crimson-glow: #e11d48;
+            --crimson-light: #fb7185;
+            --violet-glow: #8b5cf6;
+            --emerald-glow: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-sub: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 15% 10%, rgba(225, 29, 72, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            background: rgba(14, 11, 20, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 14px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-icon {
+            font-size: 24px;
+            background: linear-gradient(135deg, #e11d48, #8b5cf6);
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(225, 29, 72, 0.4);
+        }
+
+        .brand-text h1 {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-text p {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .status-strip {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .pill {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+        }
+
+        .pill-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--emerald-glow);
+            box-shadow: 0 0 8px var(--emerald-glow);
+        }
+
+        main {
+            max-width: 1440px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 24px 32px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .track-tabs {
+            background: rgba(18, 15, 26, 0.8);
+            border: 1px solid var(--border-subtle);
+            padding: 6px;
+            border-radius: 14px;
+            display: inline-flex;
+            gap: 8px;
+            align-self: flex-start;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(225, 29, 72, 0.35);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        @media (max-width: 1080px) {
+            .workspace-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .glass-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 22px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .input-text,
+        .input-select,
+        .input-textarea {
+            background: rgba(14, 11, 20, 0.9);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .input-text:focus,
+        .input-select:focus,
+        .input-textarea:focus {
+            border-color: var(--crimson-glow);
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+        }
+
+        .input-textarea {
+            resize: vertical;
+            min-height: 130px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+        }
+
+        .time-card {
+            background: rgba(10, 8, 15, 0.7);
+            border: 1px dashed var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .time-row span:first-child {
+            color: var(--text-sub);
+        }
+
+        .time-row span:last-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--crimson-light);
+        }
+
+        .time-badge {
+            background: rgba(139, 92, 246, 0.15);
+            color: #c4b5fd;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            align-self: flex-start;
+        }
+
+        /* 1-Click Template Grid */
+        .template-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+            max-height: 290px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .template-grid::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .template-grid::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .template-card {
+            background: rgba(16, 13, 23, 0.85);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .template-card:hover {
+            border-color: var(--crimson-glow);
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(225, 29, 72, 0.15);
+        }
+
+        .template-card.active {
+            border-color: var(--crimson-light);
+            background: rgba(225, 29, 72, 0.08);
+            box-shadow: 0 0 0 1px var(--crimson-light);
+        }
+
+        .tpl-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .tpl-meta {
+            display: flex;
+            gap: 6px;
+            font-size: 11px;
+            flex-wrap: wrap;
+        }
+
+        .tpl-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .tpl-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .btn-mini {
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+
+        .btn-mini-primary {
+            background: rgba(225, 29, 72, 0.2);
+            color: #fb7185;
+            border: 1px solid rgba(225, 29, 72, 0.3);
+        }
+
+        .btn-mini-primary:hover {
+            background: var(--crimson-glow);
+            color: #fff;
+        }
+
+        .btn-mini-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+        }
+
+        .btn-mini-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        /* Searchable Select Combobox */
+        .search-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .search-select-trigger {
+            background: rgba(14, 11, 20, 0.95);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-select-trigger:hover,
+        .search-select-trigger.active {
+            border-color: var(--crimson-glow);
+            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+        }
+
+        .search-select-trigger .trigger-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+        }
+
+        .search-select-trigger .trigger-arrow {
+            font-size: 11px;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+            margin-left: 8px;
+        }
+
+        .search-select-trigger.active .trigger-arrow {
+            transform: rotate(180deg);
+            color: var(--crimson-light);
+        }
+
+        .search-select-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #110d19;
+            border: 1px solid rgba(225, 29, 72, 0.35);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
+            z-index: 100;
+            backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            animation: fadeInDown 0.15s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .search-box-container {
+            display: flex;
+            align-items: center;
+            background: rgba(22, 17, 31, 0.9);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 6px 10px;
+            gap: 8px;
+        }
+
+        .search-box-container:focus-within {
+            border-color: var(--crimson-glow);
+            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
+        }
+
+        .search-box-input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 12.5px;
+            width: 100%;
+            outline: none;
+        }
+
+        .search-box-clear {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .search-box-clear:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .search-options-list {
+            max-height: 230px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: 4px;
+        }
+
+        .search-options-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .search-options-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .search-option-item {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-muted);
+            transition: all 0.12s ease;
+        }
+
+        .search-option-item:hover,
+        .search-option-item.highlighted {
+            background: rgba(225, 29, 72, 0.15);
+            color: var(--text-main);
+        }
+
+        .search-option-item.selected {
+            background: rgba(225, 29, 72, 0.25);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .search-option-item .item-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--crimson-light);
+            margin-right: 8px;
+        }
+
+        .search-option-empty {
+            padding: 16px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .template-filter-tabs {
+            display: inline-flex;
+            background: rgba(14, 11, 20, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 2px;
+            gap: 2px;
+        }
+
+        .tpl-filter-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .tpl-filter-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tpl-filter-btn.active {
+            background: rgba(225, 29, 72, 0.25);
+            color: #fb7185;
+            font-weight: 700;
+        }
+
+        .diff-preview-box {
+            background: #0d0b13;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .diff-preview-box img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
+        }
+
+        .project-card {
+            background: rgba(16, 12, 24, 0.85);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            border-radius: 12px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .project-path-line {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            color: var(--text-sub);
+            background: rgba(10, 8, 15, 0.7);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .project-path-line:hover {
+            color: var(--text-main);
+            border-color: rgba(139, 92, 246, 0.4);
+            background: rgba(139, 92, 246, 0.08);
+        }
+
+        .discovered-project-item {
+            background: rgba(22, 17, 31, 0.9);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .discovered-project-item:hover {
+            border-color: var(--crimson-glow);
+            background: rgba(225, 29, 72, 0.12);
+        }
+
+        .discovered-project-item.active {
+            border-color: #a78bfa;
+            background: rgba(167, 139, 250, 0.15);
+        }
+
+        .diff-placeholder {
+            padding: 36px 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .bottom-bar {
+            background: rgba(18, 14, 25, 0.9);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: sticky;
+            bottom: 20px;
+            z-index: 40;
+        }
+
+        .btn {
+            border: none;
+            padding: 11px 22px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: #fff;
+            box-shadow: 0 4px 18px rgba(225, 29, 72, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(225, 29, 72, 0.55);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-emerald {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff;
+            box-shadow: 0 4px 18px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-emerald:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 4, 8, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-active);
+            border-radius: 20px;
+            padding: 28px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            max-width: 580px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(225, 29, 72, 0.2);
+            border-top-color: var(--crimson-glow);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .dropzone {
+            border: 2px dashed var(--border-subtle);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(12, 10, 18, 0.5);
+        }
+
+        .dropzone:hover {
+            border-color: var(--crimson-glow);
+            background: rgba(225, 29, 72, 0.04);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🌙</div>
+            <div class="brand-text">
+                <h1>Lunar IT</h1>
+                <p>Si-Pangaduan Bridge • Automated Ticket Dispatcher</p>
+            </div>
+        </div>
+        <div class="status-strip">
+            <!-- User Switcher -->
+            <div class="pill" style="gap:8px;">
+                <span>👤</span>
+                <select id="header-user-select" class="input-select"
+                    style="padding: 2px 6px; font-size:12px; width:auto; border:none; background:transparent;"
+                    onchange="handleUserSwitch(this.value)">
+                    <option value="sigit">Sigit</option>
+                    <option value="__new__">+ Tambah Profil Baru...</option>
+                </select>
+            </div>
+            <div class="pill">
+                <span id="label-repo">fe_remedis_ranap</span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 6px 14px; font-size:12px; border-radius:9999px;"
+                onclick="openSettingsModal()">
+                ⚙️ Pengaturan & Akun
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Track Tabs -->
+        <div class="track-tabs">
+            <button class="tab-btn active" id="tab-programmer" onclick="switchTrack('programmer')">
+                <span>💻</span> Programmer Track
+            </button>
+            <button class="tab-btn" id="tab-support" onclick="switchTrack('it_support')">
+                <span>🛠️</span> IT Support Track
+            </button>
+        </div>
+
+        <div class="workspace-grid">
+            <!-- Left Column: Form Settings -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <span>📋 Formulir Pengaduan Config</span>
+                    <span id="badge-track" class="pill"
+                        style="color: var(--crimson-light); border-color: rgba(225, 29, 72, 0.3);">Programmer</span>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="input-nama">Nama Pengadu</label>
+                    <input type="text" id="input-nama" class="input-text" placeholder="Nama Petugas IT">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="select-unit">
+                        <span>Dari Unit / Bagian</span>
+                        <span id="badge-unit-count" style="font-size:11px; color:var(--text-sub);">92 Unit
+                            Terdeteksi</span>
+                    </label>
+                    <div class="search-select-wrapper" id="combobox-unit">
+                        <div class="search-select-trigger" id="trigger-unit" onclick="toggleDropdown('unit')">
+                            <span class="trigger-text" id="label-unit">Memuat unit...</span>
+                            <span class="trigger-arrow">▾</span>
+                        </div>
+                        <div class="search-select-dropdown" id="dropdown-unit" style="display:none;">
+                            <div class="search-box-container">
+                                <span>🔍</span>
+                                <input type="text" class="search-box-input" id="search-unit"
+                                    placeholder="Cari nama atau kode unit (misal: IT, Farmasi, IGD)..."
+                                    oninput="filterOptions('unit', this.value)" autocomplete="off">
+                                <button type="button" class="search-box-clear" onclick="clearSearch('unit')">✕</button>
+                            </div>
+                            <div class="search-options-list" id="list-unit"></div>
+                        </div>
+                    </div>
+                    <select id="select-unit" style="display:none;" onchange="syncFromNativeSelect('unit')">
+                        <option value="44" selected>Inst. Rekam Medik</option>
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="select-jenis">
+                        <span>Jenis Aduan</span>
+                        <span id="badge-jenis-count" style="font-size:11px; color:var(--text-sub);">12 Jenis
+                            Aduan</span>
+                    </label>
+                    <div class="search-select-wrapper" id="combobox-jenis">
+                        <div class="search-select-trigger" id="trigger-jenis" onclick="toggleDropdown('jenis')">
+                            <span class="trigger-text" id="label-jenis">Memuat jenis aduan...</span>
+                            <span class="trigger-arrow">▾</span>
+                        </div>
+                        <div class="search-select-dropdown" id="dropdown-jenis" style="display:none;">
+                            <div class="search-box-container">
+                                <span>🔍</span>
+                                <input type="text" class="search-box-input" id="search-jenis"
+                                    placeholder="Cari jenis aduan..." oninput="filterOptions('jenis', this.value)"
+                                    autocomplete="off">
+                                <button type="button" class="search-box-clear" onclick="clearSearch('jenis')">✕</button>
+                            </div>
+                            <div class="search-options-list" id="list-jenis"></div>
+                        </div>
+                    </div>
+                    <select id="select-jenis" style="display:none;"
+                        onchange="updateTimestamps(); syncFromNativeSelect('jenis');">
+                        <option value="4" selected>Perbaikan Aplikasi</option>
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="input-norm">Nomor Rekam Medis (No RM)</label>
+                    <input type="text" id="input-norm" class="input-text" value="-">
+                </div>
+
+                <!-- Timestamps Box -->
+                <div class="time-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:12px; font-weight:700;">Waktu Pengerjaan (Auto Invariant)</span>
+                        <span class="time-badge" id="badge-duration">23h 59m Delta</span>
+                    </div>
+                    <div class="time-row">
+                        <span>Waktu Penerimaan:</span>
+                        <span id="text-penerimaan">Calculating...</span>
+                    </div>
+                    <div class="time-row">
+                        <span>Waktu Penyelesaian:</span>
+                        <span id="text-penyelesaian">Calculating...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Content & Evidence -->
+            <div class="glass-card">
+                <div class="card-title">
+                    <span id="label-content-title">📝 Uraian Pekerjaan & Foto Bukti</span>
+                    <div style="display:flex; gap:8px;">
+                        <button id="btn-ai-generate" class="btn btn-secondary"
+                            style="padding: 6px 12px; font-size:12px;" onclick="generateAiNotes()">
+                            ✨ Generate Catatan (Ollama / Diff)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Programmer Project & Commit Card -->
+                <div id="programmer-project-card" class="project-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:12.5px; font-weight:700; color:var(--text-main);">📁 Project / Repositori:</span>
+                            <span id="badge-active-repo" class="pill" style="color:#a78bfa; border-color:rgba(167, 139, 250, 0.35); font-weight:700; background:rgba(167, 139, 250, 0.1);">fe_remedis_ranap</span>
+                        </div>
+                        <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:11px;" onclick="openProjectModal()">
+                            📂 Ganti Project / Path Lain
+                        </button>
+                    </div>
+                    <div class="project-path-line" id="preview-repo-path" onclick="openProjectModal()" title="Klik untuk mengubah path repositori">
+                        /home/miharin/Documents/Project/fe_remedis_ranap
+                    </div>
+                    <div id="programmer-banner" class="pill"
+                        style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25); border-radius: 8px; justify-content: space-between; width:100%; margin-top:2px;">
+                        <span id="label-commit">Commit: Membaca riwayat git...</span>
+                        <span style="color: #a855f7; font-size:11px; font-weight:700;">Git Auto-Sync</span>
+                    </div>
+                </div>
+
+                <!-- 1-Click Templates (Available for Both Programmer & IT Support) -->
+                <div id="templates-section" class="template-section">
+                    <div
+                        style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:12.5px; font-weight:700; color:var(--text-muted);">⚡ 1-Click Template
+                                Aduan:</span>
+                            <div class="template-filter-tabs">
+                                <button type="button" class="tpl-filter-btn active" id="filter-tpl-all"
+                                    onclick="filterTemplatesByTrack('all')">Semua</button>
+                                <button type="button" class="tpl-filter-btn" id="filter-tpl-prog"
+                                    onclick="filterTemplatesByTrack('programmer')">💻 Programmer</button>
+                                <button type="button" class="tpl-filter-btn" id="filter-tpl-supp"
+                                    onclick="filterTemplatesByTrack('it_support')">🛠️ IT Support</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size:11px;"
+                            onclick="openAddTemplateModal()">
+                            ➕ Simpan Template Baru
+                        </button>
+                    </div>
+                    <div class="template-grid" id="template-grid-container">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="textarea-komplain">Isi Komplain / Ringkasan Pekerjaan</label>
+                    <textarea id="textarea-komplain" class="input-textarea"
+                        placeholder="Tuliskan rincian perbaikan atau pekerjaan IT..."></textarea>
+                </div>
+
+                <!-- Evidence Section -->
+                <div class="field-group">
+                    <label class="field-label">
+                        <span>Foto Bukti Pekerjaan</span>
+                        <button id="btn-regen-card" class="btn btn-secondary" style="padding: 4px 10px; font-size:11px;"
+                            onclick="generateDiffCard()">
+                            ⚡ Generate Git Diff Card
+                        </button>
+                    </label>
+
+                    <div id="diff-card-container" class="diff-preview-box">
+                        <div class="diff-placeholder" id="diff-placeholder">
+                            <span>⚡ Klik "Generate Git Diff Card" untuk membuat kartu bukti instan (300ms).</span>
+                        </div>
+                        <img id="diff-card-img" style="display:none;" alt="Bukti Git Diff">
+                    </div>
+
+                    <div id="support-upload-container" style="display:none;" class="dropzone"
+                        onclick="document.getElementById('file-upload').click()">
+                        <input type="file" id="file-upload" style="display:none;" accept="image/*"
+                            onchange="handleManualFile(this.files[0])">
+                        <p id="label-upload-status">📸 Klik atau Drag & Drop foto bukti di sini (Opsional)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Bottom Action Bar -->
+        <div class="bottom-bar">
+            <div style="display: flex; align-items:center; gap: 12px;">
+                <div class="pill-dot"></div>
+                <span id="footer-status" style="font-size: 13px; font-weight:600; color:var(--text-muted);">Siap Mengisi
+                    Formulir</span>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-secondary" onclick="copyKomplainText()">
+                    📋 Salin Teks
+                </button>
+                <button class="btn btn-primary" onclick="submitToPortal(false)">
+                    🚀 Buka di Si-Pangaduan (Review Mode)
+                </button>
+                <button class="btn btn-emerald" onclick="submitToPortal(true)">
+                    ⚡ Kirim Langsung (Auto Simpan)
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Loading Overlay -->
+    <div class="modal-overlay" id="modal-loading">
+        <div class="modal-content" style="align-items:center; text-align:center;">
+            <div class="spinner"></div>
+            <h3 id="modal-title">Menghubungkan ke Si-Pangaduan...</h3>
+            <p id="modal-desc" style="font-size: 13px; color: var(--text-muted);">Menyiapkan browser desktop dan mengisi
+                formulir secara presisi...</p>
+        </div>
+    </div>
+
+    <!-- Modal Settings Drawer -->
+    <div class="modal-overlay" id="modal-settings">
+        <div class="modal-content">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+                <h3 style="font-size:16px; font-weight:700;">⚙️ Pengaturan Profil Pengguna & Si-Pangaduan</h3>
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
+                    onclick="closeSettingsModal()">✕</button>
+            </div>
+
+            <!-- Profile List & Quick Pick -->
+            <div class="field-group">
+                <label class="field-label">Pilih Profil Aktif</label>
+                <select id="modal-profile-select" class="input-select" onchange="loadProfileToModal(this.value)">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="setting-nama">Nama Petugas (Nama Pengadu)</label>
+                <input type="text" id="setting-nama" class="input-text" placeholder="Sigit">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="setting-user">Username Akun Si-Pangaduan</label>
+                <input type="text" id="setting-user" class="input-text" placeholder="01229">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="setting-pass">Password Si-Pangaduan</label>
+                <input type="password" id="setting-pass" class="input-text" placeholder="••••••">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="setting-url">URL Portal Si-Pangaduan</label>
+                <input type="text" id="setting-url" class="input-text" value="http://192.168.0.152/it/">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; gap:12px; margin-top:8px;">
+                <button class="btn btn-secondary" style="font-size:12px;" onclick="syncOptionsFromPortal()">
+                    🔄 Sinkronkan Unit dari Web
+                </button>
+                <button class="btn btn-primary" onclick="saveSettings()">
+                    💾 Simpan ke Lokal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Add Custom Template -->
+    <div class="modal-overlay" id="modal-add-template" style="display:none;">
+        <div class="modal-content" style="max-width:480px;">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+                <h3 style="font-size:16px; font-weight:700;">➕ Simpan Sebagai Template Baru</h3>
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
+                    onclick="closeAddTemplateModal()">✕</button>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="new-tpl-title">Judul Template</label>
+                <input type="text" id="new-tpl-title" class="input-text"
+                    placeholder="Misal: Perbaikan & Pemeliharaan Jaringan IT">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="field-group">
+                    <label class="field-label" for="new-tpl-icon">Ikon Emoji</label>
+                    <input type="text" id="new-tpl-icon" class="input-text" value="🌐"
+                        style="text-align:center; font-size:18px;">
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="new-tpl-track">Kategori Track</label>
+                    <select id="new-tpl-track" class="input-select">
+                        <option value="both" selected>Keduanya (Both)</option>
+                        <option value="programmer">Programmer</option>
+                        <option value="it_support">IT Support</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Dari Unit Terpilih</label>
+                <input type="text" id="new-tpl-unit-display" class="input-text" readonly
+                    style="opacity:0.85; font-size:12px;">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Jenis Aduan Terpilih</label>
+                <input type="text" id="new-tpl-jenis-display" class="input-text" readonly
+                    style="opacity:0.85; font-size:12px;">
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="new-tpl-text">Isi Ringkasan Pekerjaan</label>
+                <textarea id="new-tpl-text" class="input-textarea" style="min-height:90px;"
+                    placeholder="Rincian perbaikan atau pekerjaan..."></textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
+                <button class="btn btn-secondary" onclick="closeAddTemplateModal()">Batal</button>
+                <button class="btn btn-primary" onclick="saveNewTemplate()">💾 Simpan Template</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Switch Project / Path -->
+    <div class="modal-overlay" id="modal-switch-project" style="display:none;">
+        <div class="modal-content" style="max-width:540px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+                <h3 style="font-size:16px; font-weight:700;">📂 Pilih / Ganti Repositori Project</h3>
+                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="closeProjectModal()">✕</button>
+            </div>
+
+            <!-- Quick Pick Sibling Projects -->
+            <div class="field-group">
+                <label class="field-label">
+                    <span>Project yang Ditemukan (Folder Tetangga)</span>
+                    <span style="font-size:11px; color:var(--text-sub);">Auto-Discovered</span>
+                </label>
+                <div id="discovered-projects-list" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding-right:4px;">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- Manual Custom Path Input -->
+            <div class="field-group">
+                <label class="field-label" for="input-custom-repo-path">
+                    <span>Ketik atau Paste Path Repositori Lain</span>
+                    <span style="font-size:11px; color:var(--crimson-light);">Linux / Windows</span>
+                </label>
+                <input type="text" id="input-custom-repo-path" class="input-text" placeholder="Misal: /home/miharin/Documents/Project/nama_project atau D:\Projects\...">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                <span id="project-switch-status" style="font-size:12px; color:var(--text-muted);"></span>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-secondary" onclick="closeProjectModal()">Batal</button>
+                    <button class="btn btn-primary" onclick="submitCustomProjectPath()">🚀 Beralih ke Project Ini</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTrack = 'programmer';
+        let currentRepoPath = '';
+        let discoveredProjects = [];
+        let evidenceImagePath = null;
+        let initData = {};
+        let portalOptions = { unitOptions: [], jenisAduanOptions: [] };
+        let appSettings = { profiles: [] };
+        let itTemplates = [];
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // 1. Initial Load & Sync
+        async function fetchInitialData() {
+            try {
+                const res = await fetch('/api/init');
+                initData = await res.json();
+
+                appSettings = initData.settings || { profiles: [] };
+                portalOptions = initData.options || { unitOptions: [], jenisAduanOptions: [] };
+                itTemplates = initData.templates || [];
+                currentRepoPath = initData.repoPath || '';
+                discoveredProjects = initData.discoveredProjects || [];
+
+                populateSelectOptions();
+                populateUserProfiles();
+                renderItTemplates();
+
+                const activeProf = getActiveProfile();
+                applyProfileToForm(activeProf);
+
+                updateProjectDisplay();
+                generateDiffCard();
+                updateTimestamps();
+            } catch (err) {
+                console.error('Failed to init:', err);
+            }
+        }
+
+        function updateProjectDisplay() {
+            const repoBase = initData.repoName || currentRepoPath.split(/[/\\]/).pop() || 'fe_remedis_ranap';
+            document.getElementById('label-repo').textContent = repoBase;
+            const badgeRepo = document.getElementById('badge-active-repo');
+            if (badgeRepo) badgeRepo.textContent = repoBase;
+            const pathLine = document.getElementById('preview-repo-path');
+            if (pathLine) pathLine.textContent = currentRepoPath;
+
+            if (initData.commit) {
+                document.getElementById('label-commit').textContent = `Commit: ${initData.commit.hash} - ${initData.commit.msg}`;
+            } else {
+                document.getElementById('label-commit').textContent = 'Tidak ada riwayat commit git di path ini';
+            }
+        }
+
+        // 1.1 Project & Repository Switcher
+        function openProjectModal() {
+            document.getElementById('modal-switch-project').style.display = 'flex';
+            document.getElementById('input-custom-repo-path').value = currentRepoPath;
+            document.getElementById('project-switch-status').textContent = '';
+            renderDiscoveredProjects();
+        }
+
+        function closeProjectModal() {
+            document.getElementById('modal-switch-project').style.display = 'none';
+        }
+
+        function renderDiscoveredProjects() {
+            const container = document.getElementById('discovered-projects-list');
+            if (!container) return;
+
+            if (!discoveredProjects || discoveredProjects.length === 0) {
+                container.innerHTML = `<div style="font-size:12px; color:var(--text-muted); padding:8px;">Tidak ada project tetangga otomatis terdeteksi. Silakan ketik path manual di bawah.</div>`;
+                return;
+            }
+
+            container.innerHTML = discoveredProjects.map(p => {
+                const isActive = p.path === currentRepoPath;
+                const cleanPath = p.path.replace(/\\/g, '/');
+                return `
+                    <div class="discovered-project-item ${isActive ? 'active' : ''}" onclick="switchProjectTo('${cleanPath}')">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:14px;">${p.isGit ? '📁' : '📂'}</span>
+                            <span style="font-weight:600; font-size:12.5px; color:${isActive ? '#c4b5fd' : 'var(--text-main)'};">${escapeHtml(p.name)}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:11px; font-family:'JetBrains Mono'; color:var(--text-sub);">${escapeHtml(p.path)}</span>
+                            ${isActive ? '<span style="color:#a78bfa; font-weight:700; font-size:11px;">Aktif ✓</span>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function switchProjectTo(newPath) {
+            if (!newPath) return;
+            document.getElementById('project-switch-status').textContent = 'Beralih ke project...';
+
+            try {
+                const res = await fetch('/api/switch-project', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoPath: newPath })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentRepoPath = data.repoPath;
+                    initData.repoPath = data.repoPath;
+                    initData.repoName = data.repoName;
+                    initData.commit = data.commit;
+                    updateProjectDisplay();
+                    closeProjectModal();
+                    // Automatically regenerate diff card and notes for the new project!
+                    generateDiffCard();
+                    generateAiNotes();
+                } else {
+                    alert('Gagal beralih project: ' + (data.error || 'Unknown error'));
+                    document.getElementById('project-switch-status').textContent = '';
+                }
+            } catch (err) {
+                alert('Gagal menghubungi server: ' + err.message);
+                document.getElementById('project-switch-status').textContent = '';
+            }
+        }
+
+        function submitCustomProjectPath() {
+            const val = document.getElementById('input-custom-repo-path').value.trim();
+            if (!val) {
+                alert('Silakan masukkan path repositori!');
+                return;
+            }
+            switchProjectTo(val);
+        }
+
+        function getActiveProfile() {
+            const list = appSettings.profiles || [];
+            return list.find(p => p.nama === appSettings.activeProfile || p.id === appSettings.activeProfile) || list[0] || {
+                nama: 'Sigit',
+                portalUsername: '01229',
+                portalPassword: '123456',
+                defaultUnit: '44',
+                defaultJenisAduan: '4'
+            };
+        }
+
+        // 2. Profile Management
+        function populateUserProfiles() {
+            const headerSelect = document.getElementById('header-user-select');
+            const modalSelect = document.getElementById('modal-profile-select');
+            const profiles = appSettings.profiles || [];
+
+            let html = profiles.map(p => `<option value="${p.nama}">${p.nama} (${p.portalUsername})</option>`).join('');
+            headerSelect.innerHTML = html + `<option value="__new__">+ Tambah Profil Baru...</option>`;
+            modalSelect.innerHTML = html + `<option value="__new__">+ Tambah Profil Baru...</option>`;
+
+            headerSelect.value = appSettings.activeProfile || (profiles[0] ? profiles[0].nama : '');
+            modalSelect.value = headerSelect.value;
+        }
+
+        function handleUserSwitch(val) {
+            if (val === '__new__') {
+                openSettingsModal(true);
+                return;
+            }
+            appSettings.activeProfile = val;
+            const prof = getActiveProfile();
+            applyProfileToForm(prof);
+            saveSettings(false);
+        }
+
+        function loadProfileToModal(val) {
+            if (val === '__new__') {
+                document.getElementById('setting-nama').value = '';
+                document.getElementById('setting-user').value = '';
+                document.getElementById('setting-pass').value = '';
+                return;
+            }
+            const prof = (appSettings.profiles || []).find(p => p.nama === val);
+            if (prof) {
+                document.getElementById('setting-nama').value = prof.nama || '';
+                document.getElementById('setting-user').value = prof.portalUsername || '';
+                document.getElementById('setting-pass').value = prof.portalPassword || '';
+            }
+        }
+
+        function applyProfileToForm(prof) {
+            if (!prof) return;
+            document.getElementById('input-nama').value = prof.nama || 'Sigit';
+            if (prof.defaultUnit) {
+                document.getElementById('select-unit').value = prof.defaultUnit;
+                syncFromNativeSelect('unit');
+            }
+            if (prof.defaultJenisAduan) {
+                document.getElementById('select-jenis').value = prof.defaultJenisAduan;
+                syncFromNativeSelect('jenis');
+            }
+            document.getElementById('setting-user').value = prof.portalUsername || '01229';
+            document.getElementById('setting-pass').value = prof.portalPassword || '123456';
+            document.getElementById('setting-nama').value = prof.nama || 'Sigit';
+        }
+
+        // 3. Render 1-Click Templates (Programmer, IT Support & Both)
+        let currentTplFilter = 'all';
+
+        function filterTemplatesByTrack(track) {
+            currentTplFilter = track;
+            ['all', 'prog', 'supp'].forEach(t => {
+                const btn = document.getElementById(`filter-tpl-${t}`);
+                const matches = (t === 'all' && track === 'all') ||
+                    (t === 'prog' && track === 'programmer') ||
+                    (t === 'supp' && track === 'it_support');
+                if (btn) btn.classList.toggle('active', matches);
+            });
+            renderItTemplates();
+        }
+
+        function renderItTemplates() {
+            const container = document.getElementById('template-grid-container');
+            if (!container || !itTemplates.length) return;
+
+            const filtered = itTemplates.filter(t => {
+                const trk = t.track || 'both';
+                if (currentTplFilter === 'all') return true;
+                if (currentTplFilter === 'programmer') return trk === 'programmer' || trk === 'both';
+                if (currentTplFilter === 'it_support') return trk === 'it_support' || trk === 'both';
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; padding: 20px; text-align: center; color: var(--text-muted); font-size: 12px;">Belum ada template untuk kategori ini. Klik "➕ Simpan Template Baru" untuk menambahkan!</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map((tpl) => `
+                <div class="template-card" id="tpl-card-${tpl.id}" onclick="applyTemplate('${tpl.id}', false)">
+                    <div>
+                        <div class="tpl-header">
+                            <span>${tpl.icon || '📝'}</span>
+                            <span>${tpl.title}</span>
+                        </div>
+                        <div class="tpl-meta" style="margin-top:6px;">
+                            <span class="tpl-badge" style="color:#6ee7b7;">${tpl.unitName || tpl.unitValue}</span>
+                            <span class="tpl-badge" style="color:#93c5fd;">${tpl.jenisName || tpl.jenisValue}</span>
+                            <span class="tpl-badge" style="color:#c4b5fd;">${tpl.track === 'programmer' ? '💻 Dev' : tpl.track === 'it_support' ? '🛠️ Support' : '⚡ All'}</span>
+                        </div>
+                    </div>
+                    <div class="tpl-actions">
+                        <button class="btn-mini btn-mini-secondary" onclick="event.stopPropagation(); applyTemplate('${tpl.id}', false)">
+                            📝 Pasang Form
+                        </button>
+                        <button class="btn-mini btn-mini-primary" onclick="event.stopPropagation(); applyTemplate('${tpl.id}', true)">
+                            ⚡ 1-Click Buka
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function applyTemplate(tplId, autoSubmit = false) {
+            const tpl = itTemplates.find(t => t.id === tplId);
+            if (!tpl) return;
+
+            // Highlight chosen card
+            document.querySelectorAll('.template-card').forEach(c => c.classList.remove('active'));
+            const cardEl = document.getElementById(`tpl-card-${tplId}`);
+            if (cardEl) cardEl.classList.add('active');
+
+            // Apply values to inputs
+            document.getElementById('select-unit').value = tpl.unitValue;
+            syncFromNativeSelect('unit');
+
+            document.getElementById('select-jenis').value = tpl.jenisValue;
+            syncFromNativeSelect('jenis');
+
+            document.getElementById('textarea-komplain').value = tpl.text;
+            updateTimestamps();
+
+            if (autoSubmit) {
+                submitToPortal(false);
+            }
+        }
+
+        // 3.1 Custom Template Creator Modal Handlers
+        function openAddTemplateModal() {
+            const unitSelect = document.getElementById('select-unit');
+            const jenisSelect = document.getElementById('select-jenis');
+            const unitText = unitSelect.options[unitSelect.selectedIndex]?.text || unitSelect.value;
+            const jenisText = jenisSelect.options[jenisSelect.selectedIndex]?.text || jenisSelect.value;
+            const komplainText = document.getElementById('textarea-komplain').value;
+
+            document.getElementById('new-tpl-title').value = '';
+            document.getElementById('new-tpl-icon').value = currentTrack === 'programmer' ? '💻' : '🌐';
+            document.getElementById('new-tpl-track').value = 'both';
+            document.getElementById('new-tpl-unit-display').value = unitText;
+            document.getElementById('new-tpl-jenis-display').value = jenisText;
+            document.getElementById('new-tpl-text').value = komplainText;
+
+            document.getElementById('modal-add-template').style.display = 'flex';
+        }
+
+        function closeAddTemplateModal() {
+            document.getElementById('modal-add-template').style.display = 'none';
+        }
+
+        async function saveNewTemplate() {
+            const title = document.getElementById('new-tpl-title').value.trim();
+            if (!title) {
+                alert('Silakan masukkan judul template terlebih dahulu!');
+                return;
+            }
+
+            const icon = document.getElementById('new-tpl-icon').value.trim() || '📝';
+            const track = document.getElementById('new-tpl-track').value;
+            const unitSelect = document.getElementById('select-unit');
+            const jenisSelect = document.getElementById('select-jenis');
+            const unitValue = unitSelect.value;
+            const unitName = unitSelect.options[unitSelect.selectedIndex]?.text || unitValue;
+            const jenisValue = jenisSelect.value;
+            const jenisName = jenisSelect.options[jenisSelect.selectedIndex]?.text || jenisValue;
+            const text = document.getElementById('new-tpl-text').value;
+
+            const payload = {
+                id: 'tpl_' + Date.now(),
+                icon,
+                title,
+                track,
+                unitValue,
+                unitName,
+                jenisValue,
+                jenisName,
+                text
+            };
+
+            try {
+                const res = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    itTemplates = result.templates;
+                    renderItTemplates();
+                    closeAddTemplateModal();
+                    alert('✅ Template baru berhasil disimpan dan siap digunakan!');
+                } else {
+                    alert('Gagal menyimpan template: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Gagal menyimpan template: ' + err.message);
+            }
+        }
+
+        // 4. Populate Dropdowns with Real Extracted Options & Searchable Comboboxes
+        function populateSelectOptions() {
+            const unitSelect = document.getElementById('select-unit');
+            const jenisSelect = document.getElementById('select-jenis');
+
+            if (portalOptions.unitOptions && portalOptions.unitOptions.length > 0) {
+                unitSelect.innerHTML = portalOptions.unitOptions.map(u =>
+                    `<option value="${u.value}">${u.value} - ${u.text}</option>`
+                ).join('');
+                document.getElementById('badge-unit-count').textContent = `${portalOptions.unitOptions.length} Unit Live`;
+            }
+
+            if (portalOptions.jenisAduanOptions && portalOptions.jenisAduanOptions.length > 0) {
+                jenisSelect.innerHTML = portalOptions.jenisAduanOptions.map(j =>
+                    `<option value="${j.value}">${j.value} - ${j.text}</option>`
+                ).join('');
+                document.getElementById('badge-jenis-count').textContent = `${portalOptions.jenisAduanOptions.length} Jenis Aduan`;
+            }
+
+            // Sync initial labels and render searchable options
+            syncFromNativeSelect('unit');
+            syncFromNativeSelect('jenis');
+            renderSearchOptions('unit');
+            renderSearchOptions('jenis');
+        }
+
+        // 4.1 Searchable Combobox Engine
+        let activeDropdown = null;
+
+        function toggleDropdown(type) {
+            const dd = document.getElementById(`dropdown-${type}`);
+            const trigger = document.getElementById(`trigger-${type}`);
+            const isAlreadyOpen = dd && dd.style.display === 'flex';
+
+            closeAllDropdowns();
+
+            if (!isAlreadyOpen && dd) {
+                dd.style.display = 'flex';
+                if (trigger) trigger.classList.add('active');
+                activeDropdown = type;
+                const searchInput = document.getElementById(`search-${type}`);
+                if (searchInput) {
+                    searchInput.value = '';
+                    filterOptions(type, '');
+                    setTimeout(() => searchInput.focus(), 60);
+                }
+            }
+        }
+
+        function closeAllDropdowns() {
+            ['unit', 'jenis'].forEach(t => {
+                const dd = document.getElementById(`dropdown-${t}`);
+                const trigger = document.getElementById(`trigger-${t}`);
+                if (dd) dd.style.display = 'none';
+                if (trigger) trigger.classList.remove('active');
+            });
+            activeDropdown = null;
+        }
+
+        document.addEventListener('click', (e) => {
+            if (activeDropdown) {
+                const wrapper = document.getElementById(`combobox-${activeDropdown}`);
+                if (wrapper && !wrapper.contains(e.target)) {
+                    closeAllDropdowns();
+                }
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && activeDropdown) {
+                closeAllDropdowns();
+            }
+        });
+
+        function renderSearchOptions(type, query = '') {
+            const listEl = document.getElementById(`list-${type}`);
+            if (!listEl) return;
+
+            const selectEl = document.getElementById(`select-${type}`);
+            const currentVal = selectEl ? selectEl.value : '';
+            const q = query.trim().toLowerCase();
+
+            let items = [];
+            if (type === 'unit') {
+                items = (portalOptions.unitOptions || []).map(u => ({
+                    value: u.value,
+                    text: u.text,
+                    label: `${u.value} - ${u.text}`
+                }));
+            } else {
+                items = (portalOptions.jenisAduanOptions || []).map(j => ({
+                    value: j.value,
+                    text: j.text,
+                    label: `${j.value} - ${j.text}`
+                }));
+            }
+
+            const filtered = items.filter(it => {
+                if (!q) return true;
+                return it.label.toLowerCase().includes(q) || it.value.toLowerCase().includes(q);
+            });
+
+            if (filtered.length === 0) {
+                listEl.innerHTML = `<div class="search-option-empty">Tidak ada hasil untuk "<b>${escapeHtml(query)}</b>"</div>`;
+                return;
+            }
+
+            listEl.innerHTML = filtered.map((it) => {
+                const isSelected = it.value === currentVal;
+                let displayHtml = escapeHtml(it.label);
+                if (q) {
+                    const regex = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                    displayHtml = escapeHtml(it.label).replace(regex, '<b style="color:#fb7185; text-decoration:underline;">$1</b>');
+                }
+
+                return `
+                    <div class="search-option-item ${isSelected ? 'selected' : ''}" 
+                         onclick="selectSearchOption('${type}', '${it.value}')"
+                         data-val="${it.value}">
+                        <div style="display:flex; align-items:center;">
+                            <span class="item-code">${it.value}</span>
+                            <span>${displayHtml}</span>
+                        </div>
+                        ${isSelected ? '<span style="color:#6ee7b7; font-weight:700;">✓</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterOptions(type, val) {
+            renderSearchOptions(type, val);
+        }
+
+        function clearSearch(type) {
+            const input = document.getElementById(`search-${type}`);
+            if (input) {
+                input.value = '';
+                input.focus();
+                renderSearchOptions(type, '');
+            }
+        }
+
+        function selectSearchOption(type, value) {
+            const select = document.getElementById(`select-${type}`);
+            if (select) {
+                select.value = value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            syncFromNativeSelect(type);
+            closeAllDropdowns();
+        }
+
+        function syncFromNativeSelect(type) {
+            const select = document.getElementById(`select-${type}`);
+            const label = document.getElementById(`label-${type}`);
+            if (!select || !label) return;
+
+            const opt = select.options[select.selectedIndex];
+            if (opt) {
+                label.textContent = opt.text;
+            } else if (select.value) {
+                label.textContent = select.value;
+            }
+        }
+
+        // 5. Settings Modal Handlers
+        function openSettingsModal(isNew = false) {
+            document.getElementById('modal-settings').style.display = 'flex';
+            if (isNew) {
+                document.getElementById('modal-profile-select').value = '__new__';
+                loadProfileToModal('__new__');
+            } else {
+                const activeProf = getActiveProfile();
+                document.getElementById('modal-profile-select').value = activeProf.nama;
+                loadProfileToModal(activeProf.nama);
+            }
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('modal-settings').style.display = 'none';
+        }
+
+        async function saveSettings(showAlert = true) {
+            const selUserVal = document.getElementById('modal-profile-select').value;
+            const inputNama = document.getElementById('setting-nama').value.trim() || 'Sigit';
+            const inputUser = document.getElementById('setting-user').value.trim() || '01229';
+            const inputPass = document.getElementById('setting-pass').value.trim() || '123456';
+            const inputUrl = document.getElementById('setting-url').value.trim() || 'http://192.168.0.152/it/';
+
+            let profiles = appSettings.profiles || [];
+            let existingIdx = profiles.findIndex(p => p.nama === inputNama || p.id === selUserVal);
+
+            if (existingIdx >= 0) {
+                profiles[existingIdx] = {
+                    ...profiles[existingIdx],
+                    nama: inputNama,
+                    portalUsername: inputUser,
+                    portalPassword: inputPass,
+                    defaultUnit: document.getElementById('select-unit').value,
+                    defaultJenisAduan: document.getElementById('select-jenis').value
+                };
+            } else {
+                profiles.push({
+                    id: inputNama.toLowerCase().replace(/\s+/g, '_'),
+                    nama: inputNama,
+                    portalUsername: inputUser,
+                    portalPassword: inputPass,
+                    defaultUnit: document.getElementById('select-unit').value,
+                    defaultJenisAduan: document.getElementById('select-jenis').value
+                });
+            }
+
+            const payload = {
+                portalUrl: inputUrl,
+                activeProfile: inputNama,
+                profiles: profiles
+            };
+
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    appSettings = payload;
+                    populateUserProfiles();
+                    applyProfileToForm(getActiveProfile());
+                    closeSettingsModal();
+                    if (showAlert) alert('✅ Profil dan pengaturan berhasil disimpan ke lokal!');
+                }
+            } catch (err) {
+                alert('Gagal menyimpan pengaturan: ' + err.message);
+            }
+        }
+
+        async function syncOptionsFromPortal() {
+            const modal = document.getElementById('modal-loading');
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').textContent = 'Mengekstrak Unit & Aduan dari Web...';
+            document.getElementById('modal-desc').textContent = 'Mengakses Si-Pangaduan untuk membaca daftar unit terbaru...';
+
+            try {
+                const res = await fetch('/api/sync-options', { method: 'POST' });
+                const result = await res.json();
+                modal.style.display = 'none';
+                if (result.success && result.options) {
+                    portalOptions = result.options;
+                    populateSelectOptions();
+                    alert(`✅ Sukses mengekstrak ${portalOptions.unitOptions.length} unit dan ${portalOptions.jenisAduanOptions.length} jenis aduan!`);
+                } else {
+                    alert('Gagal mengekstrak opsi portal: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                modal.style.display = 'none';
+                alert('Gagal sinkronisasi opsi: ' + err.message);
+            }
+        }
+
+        // 6. Track Switching
+        function switchTrack(track) {
+            currentTrack = track;
+            const isProg = track === 'programmer';
+
+            document.getElementById('tab-programmer').classList.toggle('active', isProg);
+            document.getElementById('tab-support').classList.toggle('active', !isProg);
+            document.getElementById('badge-track').textContent = isProg ? 'Programmer' : 'IT Support';
+
+            document.getElementById('programmer-banner').style.display = isProg ? 'flex' : 'none';
+            document.getElementById('btn-ai-generate').style.display = isProg ? 'inline-block' : 'none';
+            document.getElementById('templates-section').style.display = 'flex';
+            document.getElementById('diff-card-container').style.display = isProg ? 'block' : 'none';
+            document.getElementById('btn-regen-card').style.display = isProg ? 'inline-block' : 'none';
+            document.getElementById('support-upload-container').style.display = isProg ? 'none' : 'block';
+
+            filterTemplatesByTrack(isProg ? 'programmer' : 'it_support');
+
+            if (isProg) {
+                document.getElementById('select-unit').value = '44'; // Inst. Rekam Medik
+                syncFromNativeSelect('unit');
+                document.getElementById('select-jenis').value = '4'; // Perbaikan Aplikasi
+                syncFromNativeSelect('jenis');
+                if (!document.getElementById('textarea-komplain').value) {
+                    generateAiNotes();
+                }
+            } else {
+                if (itTemplates.length > 0) {
+                    const firstSupport = itTemplates.find(t => t.track === 'it_support' || t.track === 'both') || itTemplates[0];
+                    applyTemplate(firstSupport.id, false);
+                }
+            }
+            updateTimestamps();
+        }
+
+        // 7. Timestamps Calculator
+        function updateTimestamps() {
+            const jenisVal = document.getElementById('select-jenis').value;
+            const now = new Date();
+            const pad = (n) => String(n).padStart(2, '0');
+            const formatStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+            const selDate = formatStr(now);
+            let penDateObj = new Date(now.getTime());
+
+            if (jenisVal === '4') {
+                penDateObj.setTime(penDateObj.getTime() - (23 * 60 + 59) * 60 * 1000);
+                document.getElementById('badge-duration').textContent = '23h 59m Delta';
+            } else if (jenisVal === '5') {
+                penDateObj.setTime(penDateObj.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
+                document.getElementById('badge-duration').textContent = '3d 23h 59m Delta';
+            } else if (['6', '7', '8'].includes(jenisVal)) {
+                penDateObj.setTime(penDateObj.getTime() - 45 * 60 * 1000);
+                document.getElementById('badge-duration').textContent = '45m Delta';
+            } else {
+                penDateObj.setTime(penDateObj.getTime() - 60 * 60 * 1000);
+                document.getElementById('badge-duration').textContent = '1h Delta';
+            }
+
+            document.getElementById('text-penyelesaian').textContent = selDate;
+            document.getElementById('text-penerimaan').textContent = formatStr(penDateObj);
+        }
+
+        // 8. Diff Card & AI Notes
+        async function generateDiffCard() {
+            const btn = document.getElementById('btn-regen-card');
+            btn.disabled = true;
+            btn.textContent = '⚡ Rendering Card...';
+
+            try {
+                const res = await fetch('/api/generate-diff-card', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoPath: currentRepoPath })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    evidenceImagePath = data.path;
+                    const img = document.getElementById('diff-card-img');
+                    img.src = '/api/diff-evidence-image?repoPath=' + encodeURIComponent(currentRepoPath) + '&t=' + Date.now();
+                    img.style.display = 'block';
+                    document.getElementById('diff-placeholder').style.display = 'none';
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⚡ Regenerate Diff Card';
+            }
+        }
+
+        async function generateAiNotes() {
+            const textarea = document.getElementById('textarea-komplain');
+            textarea.value = 'Menganalisis git diff dengan model lokal...';
+
+            try {
+                const res = await fetch('/api/generate-notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: 'gemma:2b', repoPath: currentRepoPath })
+                });
+                const data = await res.json();
+                if (data.success && data.notes) {
+                    textarea.value = data.notes;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function handleManualFile(file) {
+            if (!file) return;
+            evidenceImagePath = file.name;
+            document.getElementById('label-upload-status').textContent = `✅ Terpilih: ${file.name}`;
+        }
+
+        function copyKomplainText() {
+            const text = document.getElementById('textarea-komplain').value;
+            navigator.clipboard.writeText(text);
+            alert('Teks komplain berhasil disalin ke clipboard!');
+        }
+
+        // 9. Submit to Si-Pangaduan
+        async function submitToPortal(clickSimpan = false) {
+            const modal = document.getElementById('modal-loading');
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').textContent = clickSimpan ? 'Menyimpan ke Si-Pangaduan...' : 'Membuka Browser (Review Mode)...';
+
+            const activeProf = getActiveProfile();
+
+            const payload = {
+                role: currentTrack,
+                namaPengadu: document.getElementById('input-nama').value,
+                unitValue: document.getElementById('select-unit').value,
+                jenisAduanValue: document.getElementById('select-jenis').value,
+                noRm: document.getElementById('input-norm').value,
+                isiKomplain: document.getElementById('textarea-komplain').value,
+                screenshotPath: evidenceImagePath,
+                clickSimpan: clickSimpan,
+                portalUsername: activeProf.portalUsername || '01229',
+                portalPassword: activeProf.portalPassword || '123456',
+                repoPath: currentRepoPath
+            };
+
+            try {
+                const res = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+
+                modal.style.display = 'none';
+                if (result.success) {
+                    document.getElementById('footer-status').textContent = clickSimpan ? '✅ Formulir Berhasil Disimpan!' : '✅ Formulir Terisi di Layar!';
+                } else {
+                    alert('Gagal: ' + result.error);
+                }
+            } catch (err) {
+                modal.style.display = 'none';
+                alert('Terjadi kesalahan saat memproses otomatisasi.');
+            }
+        }
+
+        fetchInitialData();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,422 @@
+{
+  "unitOptions": [
+    {
+      "value": "5",
+      "text": "Bagian Kepegawaian"
+    },
+    {
+      "value": "7",
+      "text": "Bagian Keuangan"
+    },
+    {
+      "value": "8",
+      "text": "Bidang Keperawatan"
+    },
+    {
+      "value": "10",
+      "text": "Bagian perencanaan dan pengembangan"
+    },
+    {
+      "value": "11",
+      "text": "Bagian Rumah Tangga & Inst Perbekalan"
+    },
+    {
+      "value": "12",
+      "text": "Bagian Tata Usaha"
+    },
+    {
+      "value": "18",
+      "text": "Direktur Dan Wadir"
+    },
+    {
+      "value": "27",
+      "text": "Inst. ICU"
+    },
+    {
+      "value": "28",
+      "text": "Inst. IGD"
+    },
+    {
+      "value": "29",
+      "text": "Inst. Bedah Sentral"
+    },
+    {
+      "value": "30",
+      "text": "Inst. CSSD & Loundry"
+    },
+    {
+      "value": "31",
+      "text": "Inst. Farmasi"
+    },
+    {
+      "value": "32",
+      "text": "Inst. Gizi"
+    },
+    {
+      "value": "34",
+      "text": "Inst. IPS RS"
+    },
+    {
+      "value": "38",
+      "text": "Inst. Laboratorium"
+    },
+    {
+      "value": "39",
+      "text": "Inst. Radiologi"
+    },
+    {
+      "value": "41",
+      "text": "Inst. Rawat Jenazah"
+    },
+    {
+      "value": "44",
+      "text": "Inst. Rekam Medik"
+    },
+    {
+      "value": "58",
+      "text": "Royal Parking"
+    },
+    {
+      "value": "72",
+      "text": "Kasir"
+    },
+    {
+      "value": "77",
+      "text": "Inst. PKRS"
+    },
+    {
+      "value": "80",
+      "text": "Loket Pendaftaran"
+    },
+    {
+      "value": "84",
+      "text": "Pav. Anggrek"
+    },
+    {
+      "value": "87",
+      "text": "Pav. Bougenville"
+    },
+    {
+      "value": "88",
+      "text": "Pav. Dahlia"
+    },
+    {
+      "value": "89",
+      "text": "Pav. Mawar"
+    },
+    {
+      "value": "90",
+      "text": "Pav. Melati"
+    },
+    {
+      "value": "91",
+      "text": "Pav. Rengganis"
+    },
+    {
+      "value": "92",
+      "text": "Pav. Seruni"
+    },
+    {
+      "value": "93",
+      "text": "Pav. Teratai"
+    },
+    {
+      "value": "101",
+      "text": "Pengemudi"
+    },
+    {
+      "value": "125",
+      "text": "Poli Anak"
+    },
+    {
+      "value": "126",
+      "text": "Poli Bedah"
+    },
+    {
+      "value": "127",
+      "text": "Poli Gigi"
+    },
+    {
+      "value": "128",
+      "text": "Poli Hemodialisa"
+    },
+    {
+      "value": "129",
+      "text": "Poli Jantung"
+    },
+    {
+      "value": "130",
+      "text": "Poli Kandungan"
+    },
+    {
+      "value": "133",
+      "text": "Poli jiwa"
+    },
+    {
+      "value": "134",
+      "text": "Poli Mata"
+    },
+    {
+      "value": "135",
+      "text": "Poli Patologi Anatomi"
+    },
+    {
+      "value": "136",
+      "text": "Poli Penyakit Dalam dan VCT"
+    },
+    {
+      "value": "137",
+      "text": "Poli Psikiatri"
+    },
+    {
+      "value": "138",
+      "text": "Poli Saraf"
+    },
+    {
+      "value": "139",
+      "text": "Poli THT"
+    },
+    {
+      "value": "140",
+      "text": "Poli Umum"
+    },
+    {
+      "value": "141",
+      "text": "PPDS (Melanjutkan Pendidikan)"
+    },
+    {
+      "value": "145",
+      "text": "Instalasi INFORMASI TEKNOLOGI ( IT )"
+    },
+    {
+      "value": "150",
+      "text": "Bagian Umum"
+    },
+    {
+      "value": "153",
+      "text": "Bagian Administrasi"
+    },
+    {
+      "value": "173",
+      "text": "Bagian Instalasi Pusat Sterilisasi"
+    },
+    {
+      "value": "174",
+      "text": "Poli Rehabilitas medik"
+    },
+    {
+      "value": "175",
+      "text": "Poli Paru"
+    },
+    {
+      "value": "183",
+      "text": "Inst.Sanitasi"
+    },
+    {
+      "value": "184",
+      "text": "Inventaris"
+    },
+    {
+      "value": "185",
+      "text": "Transpoter"
+    },
+    {
+      "value": "186",
+      "text": "Rehab Medik"
+    },
+    {
+      "value": "187",
+      "text": "IRNA Endoskopi"
+    },
+    {
+      "value": "188",
+      "text": "POLI VCT"
+    },
+    {
+      "value": "189",
+      "text": "pav seroja"
+    },
+    {
+      "value": "190",
+      "text": "Security RS"
+    },
+    {
+      "value": "192",
+      "text": "Bidang Medik & penunjang"
+    },
+    {
+      "value": "193",
+      "text": "poli komplementer"
+    },
+    {
+      "value": "194",
+      "text": "Inst. PERBEKALAN"
+    },
+    {
+      "value": "195",
+      "text": "Orientasi"
+    },
+    {
+      "value": "196",
+      "text": "Sekretariat Akreditasi"
+    },
+    {
+      "value": "197",
+      "text": "Komite Medik"
+    },
+    {
+      "value": "198",
+      "text": "Poli Onkologi"
+    },
+    {
+      "value": "199",
+      "text": "Inst. ICCU"
+    },
+    {
+      "value": "200",
+      "text": "Front Office"
+    },
+    {
+      "value": "201",
+      "text": "Dokter RSU"
+    },
+    {
+      "value": "202",
+      "text": "Dokter IGD RSU"
+    },
+    {
+      "value": "203",
+      "text": "RS PARU & JANTUNG"
+    },
+    {
+      "value": "204",
+      "text": "Dokter INTERNSHIP"
+    },
+    {
+      "value": "205",
+      "text": "CATH LAB"
+    },
+    {
+      "value": "206",
+      "text": "Front Office Baru"
+    },
+    {
+      "value": "207",
+      "text": "Poli Kulit & Kelamin"
+    },
+    {
+      "value": "208",
+      "text": "Cleaning Service"
+    },
+    {
+      "value": "209",
+      "text": "Dokter INTERNSHIP 2019"
+    },
+    {
+      "value": "210",
+      "text": "CPNS"
+    },
+    {
+      "value": "211",
+      "text": "KHEMOTHERAPI"
+    },
+    {
+      "value": "212",
+      "text": "Instalasi Pengendali"
+    },
+    {
+      "value": "213",
+      "text": "Pav. Krisan"
+    },
+    {
+      "value": "214",
+      "text": "Non Aktif"
+    },
+    {
+      "value": "215",
+      "text": "PPI"
+    },
+    {
+      "value": "216",
+      "text": "Poli Bedah Saraf"
+    },
+    {
+      "value": "217",
+      "text": "Poli Urologi"
+    },
+    {
+      "value": "218",
+      "text": "Poli TB RO"
+    },
+    {
+      "value": "219",
+      "text": "Poli Bedah Orthopedi"
+    },
+    {
+      "value": "220",
+      "text": "Instalasi Anestesi"
+    },
+    {
+      "value": "221",
+      "text": "Pav. Camelia"
+    },
+    {
+      "value": "222",
+      "text": "Cleaning Service Baru"
+    },
+    {
+      "value": "223",
+      "text": "Pav. Lavender"
+    }
+  ],
+  "jenisAduanOptions": [
+    {
+      "value": "1",
+      "text": "Penanganan Komplain"
+    },
+    {
+      "value": "2",
+      "text": "Rekapitulasi dan pengolahan data absensi"
+    },
+    {
+      "value": "3",
+      "text": "Perbaikan Stok Obat Farmasi"
+    },
+    {
+      "value": "4",
+      "text": "Perbaikan Aplikasi"
+    },
+    {
+      "value": "5",
+      "text": "Pembuatan Modul SimRS"
+    },
+    {
+      "value": "6",
+      "text": "Perbaikan Jaringan"
+    },
+    {
+      "value": "7",
+      "text": "Perbaikan Hardware dan OS"
+    },
+    {
+      "value": "8",
+      "text": "Pemasangan Jaringan"
+    },
+    {
+      "value": "9",
+      "text": "Monitoring Kesesuaian E-kamar"
+    },
+    {
+      "value": "10",
+      "text": "Downtime"
+    },
+    {
+      "value": "15",
+      "text": "Kegiatan SPJ"
+    },
+    {
+      "value": "16",
+      "text": "Kegitan pengadaan barang inventaris / pendampingan pihak ketiga (CV)"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "lunar-sipangaduan",
+  "version": "1.0.0",
+  "description": "Lunar Si-Pangaduan Automation & Documentation Dashboard for Hospital IT & Programmers",
+  "main": "documentation_it.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node documentation_it.mjs",
+    "cli": "node documentation_it.mjs --cli",
+    "programmer": "node documentation_it.mjs --programmer --ai",
+    "it-support": "node documentation_it.mjs --it-support"
+  },
+  "keywords": [
+    "lunar",
+    "automation",
+    "si-pangaduan",
+    "hospital-it",
+    "playwright"
+  ],
+  "author": "Miharin & Luna",
+  "license": "MIT",
+  "dependencies": {
+    "playwright-core": "^1.40.0"
+  }
+}
