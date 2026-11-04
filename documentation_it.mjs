@@ -67,8 +67,31 @@ function loadSettings() {
     };
 }
 
+function getEffectiveSettings() {
+    const settings = loadSettings();
+    const activeProf = (settings.profiles || []).find(p => p.nama === settings.activeProfile || p.id === settings.activeProfile) 
+        || (settings.profiles && settings.profiles[0]);
+    if (activeProf) {
+        settings.portalUsername = activeProf.portalUsername || settings.portalUsername || '01229';
+        settings.portalPassword = activeProf.portalPassword || settings.portalPassword || '123456';
+        settings.defaultNama = activeProf.nama || settings.defaultNama || 'Sigit';
+        settings.defaultUnit = activeProf.defaultUnit || settings.defaultUnit || '44';
+        settings.defaultJenisAduan = activeProf.defaultJenisAduan || settings.defaultJenisAduan || '4';
+    }
+    return settings;
+}
+
 function saveSettings(settings) {
     const settingsPath = path.resolve(__dirname, 'lunar_settings.json');
+    // Mirror active profile credentials to root level for instant access
+    if (settings.profiles && settings.activeProfile) {
+        const activeProf = settings.profiles.find(p => p.nama === settings.activeProfile || p.id === settings.activeProfile) || settings.profiles[0];
+        if (activeProf) {
+            settings.portalUsername = activeProf.portalUsername || settings.portalUsername;
+            settings.portalPassword = activeProf.portalPassword || settings.portalPassword;
+            settings.defaultNama = activeProf.nama || settings.defaultNama;
+        }
+    }
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 }
 
@@ -380,9 +403,10 @@ function findRecentScreenshot() {
 // ---------------------------------------------------------
 export async function generateGitDiffCard({
     repoPath = process.cwd(),
-    outPath = path.resolve(process.cwd(), 'git_diff_evidence.png')
+    outPath = null
 } = {}) {
-    console.log('[*] [Lunar] Generating blazing-fast Git Diff Evidence Card (~300ms)...');
+    const finalOutPath = outPath || path.resolve(repoPath, 'git_diff_evidence.png');
+    console.log(`[*] [Lunar] Generating blazing-fast Git Diff Evidence Card for "${repoPath}" (~300ms)...`);
     let gitLog = '';
     let gitDiff = '';
     let branchName = 'dev';
@@ -390,11 +414,32 @@ export async function generateGitDiffCard({
 
     try {
         gitLog = execSync('git log -1 --pretty=format:"%h - %s"', { cwd: repoPath }).toString().trim();
-        gitDiff = execSync('git diff HEAD~1', { cwd: repoPath }).toString().trim();
-        branchName = execSync('git rev-parse --abbrev-ref HEAD', { cwd: repoPath }).toString().trim();
     } catch (_) {
         gitLog = 'Latest Changes';
     }
+
+    try {
+        gitDiff = execSync('git diff HEAD~1', { cwd: repoPath }).toString().trim();
+    } catch (_) {}
+    if (!gitDiff) {
+        try {
+            gitDiff = execSync('git diff HEAD', { cwd: repoPath }).toString().trim();
+        } catch (_) {}
+    }
+    if (!gitDiff) {
+        try {
+            gitDiff = execSync('git diff', { cwd: repoPath }).toString().trim();
+        } catch (_) {}
+    }
+    if (!gitDiff) {
+        try {
+            gitDiff = execSync('git show HEAD', { cwd: repoPath }).toString().trim();
+        } catch (_) {}
+    }
+
+    try {
+        branchName = execSync('git rev-parse --abbrev-ref HEAD', { cwd: repoPath }).toString().trim();
+    } catch (_) {}
 
     const [hash, ...msgParts] = gitLog.split(' - ');
     const commitMsg = msgParts.join(' - ') || gitLog;
@@ -494,11 +539,17 @@ export async function generateGitDiffCard({
     const page = await browser.newPage({ viewport: { width: 1040, height: 700 } });
     await page.setContent(html);
     const card = page.locator('.card');
-    await card.screenshot({ path: outPath });
+    await card.screenshot({ path: finalOutPath });
+    try {
+        const fallbackPath = path.resolve(__dirname, 'git_diff_evidence.png');
+        if (path.resolve(finalOutPath) !== fallbackPath) {
+            fs.copyFileSync(finalOutPath, fallbackPath);
+        }
+    } catch (_) {}
     await browser.close();
 
-    console.log(`[+] [Lunar] Git Diff Evidence Card rendered successfully: ${outPath}`);
-    return outPath;
+    console.log(`[+] [Lunar] Git Diff Evidence Card rendered successfully: ${finalOutPath}`);
+    return finalOutPath;
 }
 
 // ---------------------------------------------------------
@@ -566,13 +617,15 @@ export async function runDocumentationIT({
     portalUrl = null,
     portalUsername = null,
     portalPassword = null,
-    repoPath = process.cwd()
+    repoPath = process.cwd(),
+    waktuPenerimaan = null,
+    waktuPenyelesaian = null
 } = {}) {
     console.log('\n======================================================');
     console.log('         🌙 LUNAR IT DOCUMENTATION AUTOMATION');
     console.log('======================================================\n');
 
-    const settings = loadSettings();
+    const settings = getEffectiveSettings();
     const finalPortalUrl = portalUrl || settings.portalUrl || 'http://192.168.0.152/it/';
     const finalUsername = portalUsername || settings.portalUsername || '01229';
     const finalPassword = portalPassword || settings.portalPassword || '123456';
@@ -587,10 +640,28 @@ export async function runDocumentationIT({
 
         try {
             gitLog = execSync('git log -1 --pretty=format:"%h - %s"', { cwd: repoPath }).toString().trim();
-            gitDiff = execSync('git diff HEAD~1', { cwd: repoPath }).toString().trim();
             console.log(`[*] [Lunar] Detected latest commit: ${gitLog}`);
-        } catch (e) {
-            console.log(`[*] [Lunar] Note: No git repository detected or command unavailable.`);
+        } catch (_) {
+            gitLog = 'Latest Changes';
+        }
+
+        try {
+            gitDiff = execSync('git diff HEAD~1', { cwd: repoPath }).toString().trim();
+        } catch (_) {}
+        if (!gitDiff) {
+            try {
+                gitDiff = execSync('git diff HEAD', { cwd: repoPath }).toString().trim();
+            } catch (_) {}
+        }
+        if (!gitDiff) {
+            try {
+                gitDiff = execSync('git diff', { cwd: repoPath }).toString().trim();
+            } catch (_) {}
+        }
+        if (!gitDiff) {
+            try {
+                gitDiff = execSync('git show HEAD', { cwd: repoPath }).toString().trim();
+            } catch (_) {}
         }
 
         if (!rawIsiKomplain) {
@@ -709,21 +780,24 @@ Rincian Perubahan:
     const pad = (n) => String(n).padStart(2, '0');
     const formatDateTime = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-    const waktuPenyelesaian = formatDateTime(now);
-    let penerimaanDate = new Date(now.getTime());
+    const finalWaktuPenyelesaian = waktuPenyelesaian || formatDateTime(now);
+    let finalWaktuPenerimaan = waktuPenerimaan;
 
-    if (jenisAduanValue === '4') {
-        penerimaanDate.setTime(penerimaanDate.getTime() - (23 * 60 + 59) * 60 * 1000);
-    } else if (jenisAduanValue === '5') {
-        penerimaanDate.setTime(penerimaanDate.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
-    } else if (['6', '7', '8'].includes(jenisAduanValue)) {
-        penerimaanDate.setTime(penerimaanDate.getTime() - 45 * 60 * 1000);
-    } else {
-        penerimaanDate.setTime(penerimaanDate.getTime() - 60 * 60 * 1000);
+    if (!finalWaktuPenerimaan) {
+        let penerimaanDate = new Date(now.getTime());
+        if (jenisAduanValue === '4') {
+            penerimaanDate.setTime(penerimaanDate.getTime() - (23 * 60 + 59) * 60 * 1000);
+        } else if (jenisAduanValue === '5') {
+            penerimaanDate.setTime(penerimaanDate.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
+        } else if (['6', '7', '8'].includes(jenisAduanValue)) {
+            penerimaanDate.setTime(penerimaanDate.getTime() - 45 * 60 * 1000);
+        } else {
+            penerimaanDate.setTime(penerimaanDate.getTime() - 60 * 60 * 1000);
+        }
+        finalWaktuPenerimaan = formatDateTime(penerimaanDate);
     }
 
-    const waktuPenerimaan = formatDateTime(penerimaanDate);
-    console.log(`[*] [Lunar] Timestamps: Penerimaan=${waktuPenerimaan}, Penyelesaian=${waktuPenyelesaian}`);
+    console.log(`[*] [Lunar] Timestamps: Penerimaan=${finalWaktuPenerimaan}, Penyelesaian=${finalWaktuPenyelesaian}`);
 
     // Set DateRangePicker via jQuery instance
     await page.evaluate(({ penDate, selDate }) => {
@@ -741,7 +815,7 @@ Rincian Perubahan:
         setDrp('#reservation3', penDate);
         setDrp('#reservation31', selDate);
         $('.daterangepicker').hide();
-    }, { penDate: waktuPenerimaan, selDate: waktuPenyelesaian });
+    }, { penDate: finalWaktuPenerimaan, selDate: finalWaktuPenyelesaian });
 
     await page.waitForTimeout(1000);
 
@@ -815,7 +889,12 @@ export function startDocumentationServer({ port = 3721, repoPath = process.cwd()
         if (req.method === 'GET' && url.pathname === '/') {
             const htmlPath = path.resolve(__dirname, 'ui', 'index.html');
             if (fs.existsSync(htmlPath)) {
-                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.writeHead(200, {
+                    'Content-Type': 'text/html; charset=utf-8',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                });
                 res.end(fs.readFileSync(htmlPath));
             } else {
                 res.writeHead(404);
@@ -908,7 +987,7 @@ export function startDocumentationServer({ port = 3721, repoPath = process.cwd()
 
         // 2.2 Re-sync Options from Web Portal
         if (req.method === 'POST' && url.pathname === '/api/sync-options') {
-            const settings = loadSettings();
+            const settings = getEffectiveSettings();
             try {
                 const freshOptions = await extractPortalOptions(
                     settings.portalUrl,
@@ -957,12 +1036,31 @@ export function startDocumentationServer({ port = 3721, repoPath = process.cwd()
             return;
         }
 
+        // 2.4 Delete Template Endpoint
+        if (req.method === 'DELETE' && url.pathname === '/api/templates') {
+            const targetId = url.searchParams.get('id');
+            try {
+                let currentTemplates = loadItTemplates();
+                if (targetId) {
+                    currentTemplates = currentTemplates.filter(t => t.id !== targetId);
+                    saveItTemplates(currentTemplates);
+                    sendJson({ success: true, templates: currentTemplates });
+                    return;
+                }
+                sendJson({ success: false, error: 'Parameter id template wajib diisi' }, 400);
+            } catch (err) {
+                sendJson({ success: false, error: err.message }, 500);
+            }
+            return;
+        }
+
         // 3. Generate Diff Evidence Card Endpoint
         if (req.method === 'POST' && url.pathname === '/api/generate-diff-card') {
             const body = await readBody();
             const targetRepo = body.repoPath || currentRepoPath;
             try {
-                const diffPath = await generateGitDiffCard({ repoPath: targetRepo });
+                const targetOut = path.resolve(targetRepo, 'git_diff_evidence.png');
+                const diffPath = await generateGitDiffCard({ repoPath: targetRepo, outPath: targetOut });
                 sendJson({ success: true, path: diffPath });
             } catch (err) {
                 sendJson({ success: false, error: err.message }, 500);
@@ -974,13 +1072,55 @@ export function startDocumentationServer({ port = 3721, repoPath = process.cwd()
         if (req.method === 'GET' && url.pathname === '/api/diff-evidence-image') {
             const targetRepo = url.searchParams.get('repoPath') || currentRepoPath;
             const imgPath = path.resolve(targetRepo, 'git_diff_evidence.png');
-            if (fs.existsSync(imgPath)) {
+            const fallbackPath = path.resolve(__dirname, 'git_diff_evidence.png');
+            const actualPath = fs.existsSync(imgPath) ? imgPath : (fs.existsSync(fallbackPath) ? fallbackPath : null);
+
+            if (actualPath) {
                 res.writeHead(200, { 'Content-Type': 'image/png' });
-                res.end(fs.readFileSync(imgPath));
+                res.end(fs.readFileSync(actualPath));
             } else {
                 res.writeHead(404);
                 res.end('Image not found');
             }
+            return;
+        }
+
+        // 4.1 Raw Diff Text Endpoint
+        if (req.method === 'GET' && url.pathname === '/api/raw-diff') {
+            const targetRepo = url.searchParams.get('repoPath') || currentRepoPath;
+            let rawDiff = '';
+            let commitInfo = null;
+            try {
+                const gitLog = execSync('git log -1 --pretty=format:"%h - %s"', { cwd: targetRepo }).toString().trim();
+                const [hash, ...msgParts] = gitLog.split(' - ');
+                commitInfo = { hash, msg: msgParts.join(' - ') };
+            } catch (_) {}
+
+            try {
+                rawDiff = execSync('git diff HEAD~1', { cwd: targetRepo }).toString();
+            } catch (_) {}
+            if (!rawDiff) {
+                try {
+                    rawDiff = execSync('git diff HEAD', { cwd: targetRepo }).toString();
+                } catch (_) {}
+            }
+            if (!rawDiff) {
+                try {
+                    rawDiff = execSync('git diff', { cwd: targetRepo }).toString();
+                } catch (_) {}
+            }
+            if (!rawDiff) {
+                try {
+                    rawDiff = execSync('git show HEAD', { cwd: targetRepo }).toString();
+                } catch (_) {}
+            }
+
+            sendJson({
+                success: true,
+                repoPath: targetRepo,
+                commit: commitInfo,
+                diff: rawDiff || 'Tidak ada perubahan git terdeteksi (working tree bersih).'
+            });
             return;
         }
 
@@ -994,6 +1134,21 @@ export function startDocumentationServer({ port = 3721, repoPath = process.cwd()
                 try {
                     gitDiff = execSync('git diff HEAD~1', { cwd: targetRepo }).toString().trim();
                 } catch (_) {}
+                if (!gitDiff) {
+                    try {
+                        gitDiff = execSync('git diff HEAD', { cwd: targetRepo }).toString().trim();
+                    } catch (_) {}
+                }
+                if (!gitDiff) {
+                    try {
+                        gitDiff = execSync('git diff', { cwd: targetRepo }).toString().trim();
+                    } catch (_) {}
+                }
+                if (!gitDiff) {
+                    try {
+                        gitDiff = execSync('git show HEAD', { cwd: targetRepo }).toString().trim();
+                    } catch (_) {}
+                }
 
                 if (gitDiff) {
                     notes = await generateReleaseNotesWithOllama(gitDiff, body.model || 'gemma:2b');
@@ -1030,7 +1185,9 @@ Rincian Perubahan:
                     clickSimpan: body.clickSimpan,
                     portalUsername: body.portalUsername,
                     portalPassword: body.portalPassword,
-                    repoPath: body.repoPath || currentRepoPath
+                    repoPath: body.repoPath || currentRepoPath,
+                    waktuPenerimaan: body.waktuPenerimaan,
+                    waktuPenyelesaian: body.waktuPenyelesaian
                 }).catch(err => console.error('[!] Background automation error:', err));
 
                 sendJson({ success: true, message: 'Automation dispatched successfully' });
@@ -1044,12 +1201,28 @@ Rincian Perubahan:
         res.end('Not Found');
     });
 
-    server.listen(port, () => {
+function getLocalNetworkIp() {
+    try {
+        const interfaces = os.networkInterfaces();
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    return iface.address;
+                }
+            }
+        }
+    } catch (_) {}
+    return '127.0.0.1';
+}
+
+    server.listen(port, '0.0.0.0', () => {
+        const localIp = getLocalNetworkIp();
         console.log('\n======================================================');
         console.log('         🌙 LUNAR IT DOCUMENTATION PORTAL');
         console.log('======================================================\n');
-        console.log(`[+] [Lunar] Web UI is LIVE at: http://localhost:${port}`);
-        console.log(`[*] [Lunar] Accessible for all hospital programmers & IT support.`);
+        console.log(`[+] [Lunar] Web UI (Lokal PC ini): http://localhost:${port}`);
+        console.log(`[+] [Lunar] Web UI (Jaringan LAN): http://${localIp}:${port}`);
+        console.log(`[*] [Lunar] Buka link LAN di atas dari PC lain di jaringan RS untuk akses langsung.`);
         
         const isWindows = process.platform === 'win32';
         const openCmd = isWindows ? `start http://localhost:${port}` : `xdg-open http://localhost:${port}`;
@@ -1064,10 +1237,11 @@ Rincian Perubahan:
 // ---------------------------------------------------------
 async function runInteractiveCLI() {
     const rl = readline.createInterface({ input, output });
-    const settings = loadSettings();
+    const settings = getEffectiveSettings();
 
     console.log('\n--- 🌙 Lunar Si-Pangaduan Interactive Setup ---');
     console.log(`[i] Current System User: ${CURRENT_USER} (${process.platform})`);
+    console.log(`[i] Profil Aktif: ${settings.activeProfile || settings.defaultNama} (User ID: ${settings.portalUsername})`);
     
     const roleAnswer = await rl.question('1. Pilih profil [1: Programmer (default), 2: IT Support]: ') || '1';
     const role = roleAnswer.trim() === '2' ? 'it_support' : 'programmer';
@@ -1120,7 +1294,10 @@ async function runInteractiveCLI() {
         screenshotPath,
         useOllama,
         ollamaModel: 'gemma:2b',
-        clickSimpan
+        clickSimpan,
+        portalUsername: settings.portalUsername,
+        portalPassword: settings.portalPassword,
+        repoPath: settings.activeRepoPath || process.cwd()
     });
 }
 
@@ -1136,10 +1313,36 @@ if (process.argv[1]?.endsWith('documentation_it.mjs')) {
         const useOllama = process.argv.includes('--ai');
         const role = process.argv.includes('--it-support') ? 'it_support' : 'programmer';
         const clickSimpan = process.argv.includes('--submit');
-        const settings = loadSettings();
+        const settings = getEffectiveSettings();
+
+        const profileArg = process.argv.find(a => a.startsWith('--profile='))?.split('=')[1];
+        if (profileArg && settings.profiles) {
+            const chosen = settings.profiles.find(p => p.nama.toLowerCase() === profileArg.toLowerCase() || p.id === profileArg.toLowerCase());
+            if (chosen) {
+                settings.portalUsername = chosen.portalUsername || settings.portalUsername;
+                settings.portalPassword = chosen.portalPassword || settings.portalPassword;
+                settings.defaultNama = chosen.nama || settings.defaultNama;
+                settings.defaultUnit = chosen.defaultUnit || settings.defaultUnit;
+                settings.defaultJenisAduan = chosen.defaultJenisAduan || settings.defaultJenisAduan;
+            }
+        }
+
+        const usernameArg = process.argv.find(a => a.startsWith('--username='))?.split('=')[1];
+        const passwordArg = process.argv.find(a => a.startsWith('--password='))?.split('=')[1];
+        const repoArg = process.argv.find(a => a.startsWith('--repo='))?.split('=')[1] || settings.activeRepoPath || process.cwd();
         const nama = process.argv.find(a => a.startsWith('--nama='))?.split('=')[1] || settings.defaultNama || CURRENT_USER;
         const unit = process.argv.find(a => a.startsWith('--unit='))?.split('=')[1] || settings.defaultUnit || '44';
-        runDocumentationIT({ role, useOllama, clickSimpan, namaPengadu: nama, unitValue: unit }).catch(console.error);
+
+        runDocumentationIT({
+            role,
+            useOllama,
+            clickSimpan,
+            namaPengadu: nama,
+            unitValue: unit,
+            portalUsername: usernameArg || settings.portalUsername,
+            portalPassword: passwordArg || settings.portalPassword,
+            repoPath: repoArg
+        }).catch(console.error);
     } else if (isCli) {
         // Interactive terminal CLI
         runInteractiveCLI().catch(console.error);

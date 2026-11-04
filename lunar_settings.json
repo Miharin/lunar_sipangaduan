@@ -1,6 +1,8 @@
 {
   "portalUrl": "http://192.168.0.152/it/",
   "activeProfile": "Alfin",
+  "portalUsername": "01229",
+  "portalPassword": "123456",
   "profiles": [
     {
       "id": "alfin",
@@ -13,6 +15,8 @@
   ],
   "activeRepoPath": "/home/miharin/Documents/Project/fe_remedis_ranap",
   "recentProjects": [
-    "/home/miharin/Documents/Project/fe_remedis_ranap"
-  ]
+    "/home/miharin/Documents/Project/fe_remedis_ranap",
+    "/home/miharin/Documents/Project/lunar_sipangaduan"
+  ],
+  "defaultNama": "Alfin"
 }

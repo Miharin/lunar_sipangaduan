@@ -397,10 +397,31 @@
             color: var(--text-main);
         }
 
+        .btn-icon-subtle {
+            background: transparent;
+            border: none;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            opacity: 0.7;
+            transition: all 0.15s ease;
+        }
+
+        .btn-icon-subtle:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.1);
+        }
+
         /* Searchable Select Combobox */
         .search-select-wrapper {
             position: relative;
             width: 100%;
+        }
+
+        .search-select-wrapper.active-combobox {
+            z-index: 60;
         }
 
         .search-select-trigger {
@@ -916,19 +937,55 @@
                     <input type="text" id="input-norm" class="input-text" value="-">
                 </div>
 
-                <!-- Timestamps Box -->
+                <!-- Timestamps Box (Auto / Manual Modes) -->
                 <div class="time-card">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:12px; font-weight:700;">Waktu Pengerjaan (Auto Invariant)</span>
-                        <span class="time-badge" id="badge-duration">23h 59m Delta</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:12px; font-weight:700;">⏱️ Waktu Pengerjaan</span>
+                            <span class="time-badge" id="badge-duration">23h 59m Delta</span>
+                        </div>
+                        <div style="display:flex; gap:3px; background:rgba(0,0,0,0.35); padding:2px; border-radius:8px; border:1px solid var(--border-subtle);">
+                            <button type="button" id="btn-time-auto" class="btn-mini btn-mini-primary" style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('auto')">⚡ Auto</button>
+                            <button type="button" id="btn-time-manual" class="btn-mini btn-mini-secondary" style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('manual')">✏️ Manual</button>
+                        </div>
                     </div>
-                    <div class="time-row">
-                        <span>Waktu Penerimaan:</span>
-                        <span id="text-penerimaan">Calculating...</span>
+
+                    <!-- Auto Mode Display -->
+                    <div id="box-time-auto" style="display:flex; flex-direction:column; gap:6px;">
+                        <div class="time-row">
+                            <span>Waktu Penerimaan:</span>
+                            <span id="text-penerimaan">Calculating...</span>
+                        </div>
+                        <div class="time-row">
+                            <span>Waktu Penyelesaian:</span>
+                            <span id="text-penyelesaian">Calculating...</span>
+                        </div>
                     </div>
-                    <div class="time-row">
-                        <span>Waktu Penyelesaian:</span>
-                        <span id="text-penyelesaian">Calculating...</span>
+
+                    <!-- Manual Mode Display -->
+                    <div id="box-time-manual" style="display:none; flex-direction:column; gap:8px;">
+                        <div style="display:flex; flex-direction:column; gap:3px;">
+                            <label style="font-size:11px; color:var(--text-sub); display:flex; justify-content:space-between;">
+                                <span>Waktu Penerimaan (Tanggal & Jam):</span>
+                                <span style="font-size:10px; color:var(--text-muted);">Format: YYYY-MM-DD HH:mm</span>
+                            </label>
+                            <input type="datetime-local" id="input-manual-penerimaan" class="input-text"
+                                style="padding:6px 10px; font-size:12px; font-family:'JetBrains Mono', monospace;"
+                                oninput="onManualTimestampChange()">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:3px;">
+                            <label style="font-size:11px; color:var(--text-sub); display:flex; justify-content:space-between;">
+                                <span>Waktu Penyelesaian (Tanggal & Jam):</span>
+                                <button type="button" class="btn-icon-subtle" style="font-size:10px; padding:0 4px; color:#6ee7b7;" onclick="setManualTimeToNow()">⏰ Set Sekarang</button>
+                            </label>
+                            <input type="datetime-local" id="input-manual-penyelesaian" class="input-text"
+                                style="padding:6px 10px; font-size:12px; font-family:'JetBrains Mono', monospace;"
+                                oninput="onManualTimestampChange()">
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:6px; border-top:1px dashed var(--border-subtle);">
+                            <span id="manual-time-warning" style="font-size:11px; color:var(--text-muted);">Pilih tanggal & jam manual</span>
+                            <button type="button" class="btn-mini btn-mini-secondary" style="font-size:10.5px; padding:2px 8px;" onclick="syncManualFromAuto()">🔄 Reset ke Auto Delta</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1000,19 +1057,30 @@
 
                 <!-- Evidence Section -->
                 <div class="field-group">
-                    <label class="field-label">
-                        <span>Foto Bukti Pekerjaan</span>
-                        <button id="btn-regen-card" class="btn btn-secondary" style="padding: 4px 10px; font-size:11px;"
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="display:flex; gap:6px;">
+                            <button id="tab-diff-card" type="button" class="btn-mini btn-mini-primary" onclick="switchEvidenceTab('card')">🖼️ Diff Card</button>
+                            <button id="tab-diff-raw" type="button" class="btn-mini btn-mini-secondary" onclick="switchEvidenceTab('raw')">📄 Raw Git Diff</button>
+                        </div>
+                        <button id="btn-regen-card" type="button" class="btn btn-secondary" style="padding: 4px 10px; font-size:11px;"
                             onclick="generateDiffCard()">
-                            ⚡ Generate Git Diff Card
+                            ⚡ Regenerate Card
                         </button>
-                    </label>
+                    </div>
 
                     <div id="diff-card-container" class="diff-preview-box">
                         <div class="diff-placeholder" id="diff-placeholder">
-                            <span>⚡ Klik "Generate Git Diff Card" untuk membuat kartu bukti instan (300ms).</span>
+                            <span>⚡ Klik "Regenerate Card" untuk membuat kartu bukti instan (300ms).</span>
                         </div>
                         <img id="diff-card-img" style="display:none;" alt="Bukti Git Diff">
+                    </div>
+
+                    <div id="diff-raw-container" style="display:none;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <span style="font-size:11px; color:var(--text-sub);" id="raw-diff-commit-label">Commit diff</span>
+                            <button type="button" class="btn-mini btn-mini-secondary" onclick="fetchRawDiff()">🔄 Muat Ulang Diff</button>
+                        </div>
+                        <pre id="diff-raw-text" style="background:#09080e; color:#e2e8f0; padding:12px; border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5; max-height:360px; overflow:auto; white-space:pre-wrap; border:1px solid var(--border-subtle);"></pre>
                     </div>
 
                     <div id="support-upload-container" style="display:none;" class="dropzone"
@@ -1107,10 +1175,10 @@
 
     <!-- Modal Add Custom Template -->
     <div class="modal-overlay" id="modal-add-template" style="display:none;">
-        <div class="modal-content" style="max-width:480px;">
+        <div class="modal-content" style="max-width:540px;">
             <div
                 style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
-                <h3 style="font-size:16px; font-weight:700;">➕ Simpan Sebagai Template Baru</h3>
+                <h3 id="modal-tpl-heading" style="font-size:16px; font-weight:700;">➕ Simpan Sebagai Template Baru</h3>
                 <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
                     onclick="closeAddTemplateModal()">✕</button>
             </div>
@@ -1138,15 +1206,53 @@
             </div>
 
             <div class="field-group">
-                <label class="field-label">Dari Unit Terpilih</label>
-                <input type="text" id="new-tpl-unit-display" class="input-text" readonly
-                    style="opacity:0.85; font-size:12px;">
+                <label class="field-label" for="select-tpl-unit">
+                    <span>Dari Unit / Bagian</span>
+                    <span id="badge-tpl-unit-count" style="font-size:11px; color:var(--text-sub);">Pilih Unit</span>
+                </label>
+                <div class="search-select-wrapper" id="combobox-tpl-unit">
+                    <div class="search-select-trigger" id="trigger-tpl-unit" onclick="toggleDropdown('tpl-unit')">
+                        <span class="trigger-text" id="label-tpl-unit">Memuat unit...</span>
+                        <span class="trigger-arrow">▾</span>
+                    </div>
+                    <div class="search-select-dropdown" id="dropdown-tpl-unit" style="display:none;">
+                        <div class="search-box-container">
+                            <span>🔍</span>
+                            <input type="text" class="search-box-input" id="search-tpl-unit"
+                                placeholder="Cari nama atau kode unit (misal: IT, Farmasi, IGD)..."
+                                oninput="filterOptions('tpl-unit', this.value)" autocomplete="off">
+                            <button type="button" class="search-box-clear" onclick="clearSearch('tpl-unit')">✕</button>
+                        </div>
+                        <div class="search-options-list" id="list-tpl-unit"></div>
+                    </div>
+                </div>
+                <select id="select-tpl-unit" style="display:none;" onchange="syncFromNativeSelect('tpl-unit')">
+                </select>
             </div>
 
             <div class="field-group">
-                <label class="field-label">Jenis Aduan Terpilih</label>
-                <input type="text" id="new-tpl-jenis-display" class="input-text" readonly
-                    style="opacity:0.85; font-size:12px;">
+                <label class="field-label" for="select-tpl-jenis">
+                    <span>Jenis Aduan</span>
+                    <span id="badge-tpl-jenis-count" style="font-size:11px; color:var(--text-sub);">Pilih Jenis Aduan</span>
+                </label>
+                <div class="search-select-wrapper" id="combobox-tpl-jenis">
+                    <div class="search-select-trigger" id="trigger-tpl-jenis" onclick="toggleDropdown('tpl-jenis')">
+                        <span class="trigger-text" id="label-tpl-jenis">Memuat jenis aduan...</span>
+                        <span class="trigger-arrow">▾</span>
+                    </div>
+                    <div class="search-select-dropdown" id="dropdown-tpl-jenis" style="display:none;">
+                        <div class="search-box-container">
+                            <span>🔍</span>
+                            <input type="text" class="search-box-input" id="search-tpl-jenis"
+                                placeholder="Cari jenis aduan..."
+                                oninput="filterOptions('tpl-jenis', this.value)" autocomplete="off">
+                            <button type="button" class="search-box-clear" onclick="clearSearch('tpl-jenis')">✕</button>
+                        </div>
+                        <div class="search-options-list" id="list-tpl-jenis"></div>
+                    </div>
+                </div>
+                <select id="select-tpl-jenis" style="display:none;" onchange="syncFromNativeSelect('tpl-jenis')">
+                </select>
             </div>
 
             <div class="field-group">
@@ -1157,7 +1263,7 @@
 
             <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
                 <button class="btn btn-secondary" onclick="closeAddTemplateModal()">Batal</button>
-                <button class="btn btn-primary" onclick="saveNewTemplate()">💾 Simpan Template</button>
+                <button id="btn-save-tpl" class="btn btn-primary" onclick="saveNewTemplate()">💾 Simpan Template</button>
             </div>
         </div>
     </div>
@@ -1201,6 +1307,18 @@
     </div>
 
     <script>
+        // Universal HTML escaping helper (guaranteed global)
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+        window.escapeHtml = escapeHtml;
+
         let currentTrack = 'programmer';
         let currentRepoPath = '';
         let discoveredProjects = [];
@@ -1209,16 +1327,6 @@
         let portalOptions = { unitOptions: [], jenisAduanOptions: [] };
         let appSettings = { profiles: [] };
         let itTemplates = [];
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
 
         // 1. Initial Load & Sync
         async function fetchInitialData() {
@@ -1322,6 +1430,9 @@
                     // Automatically regenerate diff card and notes for the new project!
                     generateDiffCard();
                     generateAiNotes();
+                    if (activeEvidenceTab === 'raw') {
+                        fetchRawDiff();
+                    }
                 } else {
                     alert('Gagal beralih project: ' + (data.error || 'Unknown error'));
                     document.getElementById('project-switch-status').textContent = '';
@@ -1443,21 +1554,27 @@
             container.innerHTML = filtered.map((tpl) => `
                 <div class="template-card" id="tpl-card-${tpl.id}" onclick="applyTemplate('${tpl.id}', false)">
                     <div>
-                        <div class="tpl-header">
-                            <span>${tpl.icon || '📝'}</span>
-                            <span>${tpl.title}</span>
+                        <div class="tpl-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
+                                <span style="font-size:16px;">${tpl.icon || '📝'}</span>
+                                <span style="font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(tpl.title)}</span>
+                            </div>
+                            <div style="display:flex; gap:3px; flex-shrink:0;">
+                                <button type="button" title="Edit Template" class="btn-icon-subtle" onclick="event.stopPropagation(); editTemplate('${tpl.id}')">✏️</button>
+                                <button type="button" title="Hapus Template" class="btn-icon-subtle" onclick="event.stopPropagation(); deleteTemplate('${tpl.id}')">🗑️</button>
+                            </div>
                         </div>
                         <div class="tpl-meta" style="margin-top:6px;">
-                            <span class="tpl-badge" style="color:#6ee7b7;">${tpl.unitName || tpl.unitValue}</span>
-                            <span class="tpl-badge" style="color:#93c5fd;">${tpl.jenisName || tpl.jenisValue}</span>
+                            <span class="tpl-badge" style="color:#6ee7b7;">${escapeHtml(tpl.unitName || tpl.unitValue)}</span>
+                            <span class="tpl-badge" style="color:#93c5fd;">${escapeHtml(tpl.jenisName || tpl.jenisValue)}</span>
                             <span class="tpl-badge" style="color:#c4b5fd;">${tpl.track === 'programmer' ? '💻 Dev' : tpl.track === 'it_support' ? '🛠️ Support' : '⚡ All'}</span>
                         </div>
                     </div>
                     <div class="tpl-actions">
-                        <button class="btn-mini btn-mini-secondary" onclick="event.stopPropagation(); applyTemplate('${tpl.id}', false)">
+                        <button type="button" class="btn-mini btn-mini-secondary" onclick="event.stopPropagation(); applyTemplate('${tpl.id}', false)">
                             📝 Pasang Form
                         </button>
-                        <button class="btn-mini btn-mini-primary" onclick="event.stopPropagation(); applyTemplate('${tpl.id}', true)">
+                        <button type="button" class="btn-mini btn-mini-primary" onclick="event.stopPropagation(); applyTemplate('${tpl.id}', true)">
                             ⚡ 1-Click Buka
                         </button>
                     </div>
@@ -1489,26 +1606,109 @@
             }
         }
 
-        // 3.1 Custom Template Creator Modal Handlers
+        // 3.1 Custom Template Creator & Editor Modal Handlers
+        let editingTemplateId = null;
+
         function openAddTemplateModal() {
+            editingTemplateId = null;
+            document.getElementById('modal-tpl-heading').textContent = '➕ Simpan Sebagai Template Baru';
+            document.getElementById('btn-save-tpl').textContent = '💾 Simpan Template';
+
             const unitSelect = document.getElementById('select-unit');
             const jenisSelect = document.getElementById('select-jenis');
-            const unitText = unitSelect.options[unitSelect.selectedIndex]?.text || unitSelect.value;
-            const jenisText = jenisSelect.options[jenisSelect.selectedIndex]?.text || jenisSelect.value;
             const komplainText = document.getElementById('textarea-komplain').value;
 
             document.getElementById('new-tpl-title').value = '';
             document.getElementById('new-tpl-icon').value = currentTrack === 'programmer' ? '💻' : '🌐';
             document.getElementById('new-tpl-track').value = 'both';
-            document.getElementById('new-tpl-unit-display').value = unitText;
-            document.getElementById('new-tpl-jenis-display').value = jenisText;
+
+            const tplUnitSelect = document.getElementById('select-tpl-unit');
+            if (tplUnitSelect) {
+                tplUnitSelect.value = unitSelect.value || (portalOptions.unitOptions?.[0]?.value || '');
+                syncFromNativeSelect('tpl-unit');
+                renderSearchOptions('tpl-unit');
+            }
+
+            const tplJenisSelect = document.getElementById('select-tpl-jenis');
+            if (tplJenisSelect) {
+                tplJenisSelect.value = jenisSelect.value || (portalOptions.jenisAduanOptions?.[0]?.value || '');
+                syncFromNativeSelect('tpl-jenis');
+                renderSearchOptions('tpl-jenis');
+            }
+
             document.getElementById('new-tpl-text').value = komplainText;
 
             document.getElementById('modal-add-template').style.display = 'flex';
         }
 
+        function editTemplate(tplId) {
+            const tpl = itTemplates.find(t => t.id === tplId);
+            if (!tpl) return;
+
+            editingTemplateId = tpl.id;
+            document.getElementById('modal-tpl-heading').textContent = '✏️ Edit Template IT';
+            document.getElementById('btn-save-tpl').textContent = '💾 Perbarui Template';
+
+            document.getElementById('new-tpl-title').value = tpl.title;
+            document.getElementById('new-tpl-icon').value = tpl.icon || '📝';
+            document.getElementById('new-tpl-track').value = tpl.track || 'both';
+
+            const tplUnitSelect = document.getElementById('select-tpl-unit');
+            if (tplUnitSelect) {
+                if (tpl.unitValue && !Array.from(tplUnitSelect.options).some(o => o.value === String(tpl.unitValue))) {
+                    const opt = document.createElement('option');
+                    opt.value = tpl.unitValue;
+                    opt.text = `${tpl.unitValue} - ${tpl.unitName || tpl.unitValue}`;
+                    tplUnitSelect.appendChild(opt);
+                }
+                tplUnitSelect.value = tpl.unitValue;
+                syncFromNativeSelect('tpl-unit');
+                renderSearchOptions('tpl-unit');
+            }
+
+            const tplJenisSelect = document.getElementById('select-tpl-jenis');
+            if (tplJenisSelect) {
+                if (tpl.jenisValue && !Array.from(tplJenisSelect.options).some(o => o.value === String(tpl.jenisValue))) {
+                    const opt = document.createElement('option');
+                    opt.value = tpl.jenisValue;
+                    opt.text = `${tpl.jenisValue} - ${tpl.jenisName || tpl.jenisValue}`;
+                    tplJenisSelect.appendChild(opt);
+                }
+                tplJenisSelect.value = tpl.jenisValue;
+                syncFromNativeSelect('tpl-jenis');
+                renderSearchOptions('tpl-jenis');
+            }
+
+            document.getElementById('new-tpl-text').value = tpl.text || '';
+
+            document.getElementById('modal-add-template').style.display = 'flex';
+        }
+
+        async function deleteTemplate(tplId) {
+            const tpl = itTemplates.find(t => t.id === tplId);
+            if (!tpl) return;
+            if (!confirm(`Yakin ingin menghapus template "${tpl.title}"?`)) return;
+
+            try {
+                const res = await fetch(`/api/templates?id=${encodeURIComponent(tplId)}`, {
+                    method: 'DELETE'
+                });
+                const result = await res.json();
+                if (result.success) {
+                    itTemplates = result.templates;
+                    renderItTemplates();
+                } else {
+                    alert('Gagal menghapus template: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Gagal menghapus template: ' + err.message);
+            }
+        }
+
         function closeAddTemplateModal() {
+            closeAllDropdowns();
             document.getElementById('modal-add-template').style.display = 'none';
+            editingTemplateId = null;
         }
 
         async function saveNewTemplate() {
@@ -1520,16 +1720,30 @@
 
             const icon = document.getElementById('new-tpl-icon').value.trim() || '📝';
             const track = document.getElementById('new-tpl-track').value;
-            const unitSelect = document.getElementById('select-unit');
-            const jenisSelect = document.getElementById('select-jenis');
-            const unitValue = unitSelect.value;
-            const unitName = unitSelect.options[unitSelect.selectedIndex]?.text || unitValue;
-            const jenisValue = jenisSelect.value;
-            const jenisName = jenisSelect.options[jenisSelect.selectedIndex]?.text || jenisValue;
+            const tplUnitSelect = document.getElementById('select-tpl-unit');
+            const tplJenisSelect = document.getElementById('select-tpl-jenis');
+
+            const unitValue = tplUnitSelect ? tplUnitSelect.value : document.getElementById('select-unit').value;
+            const unitOpt = (portalOptions.unitOptions || []).find(u => u.value === unitValue);
+            let unitName = unitOpt ? unitOpt.text : '';
+            if (!unitName && tplUnitSelect && tplUnitSelect.selectedIndex >= 0) {
+                const rawText = tplUnitSelect.options[tplUnitSelect.selectedIndex].text;
+                unitName = rawText.includes(' - ') ? rawText.split(' - ').slice(1).join(' - ') : rawText;
+            }
+
+            const jenisValue = tplJenisSelect ? tplJenisSelect.value : document.getElementById('select-jenis').value;
+            const jenisOpt = (portalOptions.jenisAduanOptions || []).find(j => j.value === jenisValue);
+            let jenisName = jenisOpt ? jenisOpt.text : '';
+            if (!jenisName && tplJenisSelect && tplJenisSelect.selectedIndex >= 0) {
+                const rawText = tplJenisSelect.options[tplJenisSelect.selectedIndex].text;
+                jenisName = rawText.includes(' - ') ? rawText.split(' - ').slice(1).join(' - ') : rawText;
+            }
+
             const text = document.getElementById('new-tpl-text').value;
 
+            const wasEditing = Boolean(editingTemplateId);
             const payload = {
-                id: 'tpl_' + Date.now(),
+                id: editingTemplateId || ('tpl_' + Date.now()),
                 icon,
                 title,
                 track,
@@ -1551,7 +1765,7 @@
                     itTemplates = result.templates;
                     renderItTemplates();
                     closeAddTemplateModal();
-                    alert('✅ Template baru berhasil disimpan dan siap digunakan!');
+                    alert(wasEditing ? '✅ Template berhasil diperbarui!' : '✅ Template baru berhasil disimpan!');
                 } else {
                     alert('Gagal menyimpan template: ' + (result.error || 'Unknown error'));
                 }
@@ -1564,26 +1778,40 @@
         function populateSelectOptions() {
             const unitSelect = document.getElementById('select-unit');
             const jenisSelect = document.getElementById('select-jenis');
+            const tplUnitSelect = document.getElementById('select-tpl-unit');
+            const tplJenisSelect = document.getElementById('select-tpl-jenis');
 
             if (portalOptions.unitOptions && portalOptions.unitOptions.length > 0) {
-                unitSelect.innerHTML = portalOptions.unitOptions.map(u =>
+                const unitHtml = portalOptions.unitOptions.map(u =>
                     `<option value="${u.value}">${u.value} - ${u.text}</option>`
                 ).join('');
+                unitSelect.innerHTML = unitHtml;
+                if (tplUnitSelect) tplUnitSelect.innerHTML = unitHtml;
                 document.getElementById('badge-unit-count').textContent = `${portalOptions.unitOptions.length} Unit Live`;
+                const badgeTplUnit = document.getElementById('badge-tpl-unit-count');
+                if (badgeTplUnit) badgeTplUnit.textContent = `${portalOptions.unitOptions.length} Unit Live`;
             }
 
             if (portalOptions.jenisAduanOptions && portalOptions.jenisAduanOptions.length > 0) {
-                jenisSelect.innerHTML = portalOptions.jenisAduanOptions.map(j =>
+                const jenisHtml = portalOptions.jenisAduanOptions.map(j =>
                     `<option value="${j.value}">${j.value} - ${j.text}</option>`
                 ).join('');
+                jenisSelect.innerHTML = jenisHtml;
+                if (tplJenisSelect) tplJenisSelect.innerHTML = jenisHtml;
                 document.getElementById('badge-jenis-count').textContent = `${portalOptions.jenisAduanOptions.length} Jenis Aduan`;
+                const badgeTplJenis = document.getElementById('badge-tpl-jenis-count');
+                if (badgeTplJenis) badgeTplJenis.textContent = `${portalOptions.jenisAduanOptions.length} Jenis Aduan`;
             }
 
             // Sync initial labels and render searchable options
             syncFromNativeSelect('unit');
             syncFromNativeSelect('jenis');
+            if (tplUnitSelect) syncFromNativeSelect('tpl-unit');
+            if (tplJenisSelect) syncFromNativeSelect('tpl-jenis');
             renderSearchOptions('unit');
             renderSearchOptions('jenis');
+            if (tplUnitSelect) renderSearchOptions('tpl-unit');
+            if (tplJenisSelect) renderSearchOptions('tpl-jenis');
         }
 
         // 4.1 Searchable Combobox Engine
@@ -1592,6 +1820,7 @@
         function toggleDropdown(type) {
             const dd = document.getElementById(`dropdown-${type}`);
             const trigger = document.getElementById(`trigger-${type}`);
+            const wrapper = document.getElementById(`combobox-${type}`);
             const isAlreadyOpen = dd && dd.style.display === 'flex';
 
             closeAllDropdowns();
@@ -1599,6 +1828,7 @@
             if (!isAlreadyOpen && dd) {
                 dd.style.display = 'flex';
                 if (trigger) trigger.classList.add('active');
+                if (wrapper) wrapper.classList.add('active-combobox');
                 activeDropdown = type;
                 const searchInput = document.getElementById(`search-${type}`);
                 if (searchInput) {
@@ -1610,11 +1840,13 @@
         }
 
         function closeAllDropdowns() {
-            ['unit', 'jenis'].forEach(t => {
+            ['unit', 'jenis', 'tpl-unit', 'tpl-jenis'].forEach(t => {
                 const dd = document.getElementById(`dropdown-${t}`);
                 const trigger = document.getElementById(`trigger-${t}`);
+                const wrapper = document.getElementById(`combobox-${t}`);
                 if (dd) dd.style.display = 'none';
                 if (trigger) trigger.classList.remove('active');
+                if (wrapper) wrapper.classList.remove('active-combobox');
             });
             activeDropdown = null;
         }
@@ -1643,7 +1875,7 @@
             const q = query.trim().toLowerCase();
 
             let items = [];
-            if (type === 'unit') {
+            if (type === 'unit' || type === 'tpl-unit') {
                 items = (portalOptions.unitOptions || []).map(u => ({
                     value: u.value,
                     text: u.text,
@@ -1718,10 +1950,16 @@
             if (!select || !label) return;
 
             const opt = select.options[select.selectedIndex];
-            if (opt) {
+            if (opt && String(opt.value) === String(select.value)) {
                 label.textContent = opt.text;
             } else if (select.value) {
-                label.textContent = select.value;
+                if (type === 'unit' || type === 'tpl-unit') {
+                    const found = (portalOptions.unitOptions || []).find(u => String(u.value) === String(select.value));
+                    label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
+                } else {
+                    const found = (portalOptions.jenisAduanOptions || []).find(j => String(j.value) === String(select.value));
+                    label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
+                }
             }
         }
 
@@ -1855,35 +2093,223 @@
             updateTimestamps();
         }
 
-        // 7. Timestamps Calculator
-        function updateTimestamps() {
-            const jenisVal = document.getElementById('select-jenis').value;
-            const now = new Date();
-            const pad = (n) => String(n).padStart(2, '0');
-            const formatStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        // 7. Timestamps Engine (Dual-Mode: Auto & Manual)
+        let currentTimeMode = 'auto'; // 'auto' | 'manual'
+        let autoPenerimaanDate = new Date();
+        let autoPenyelesaianDate = new Date();
 
-            const selDate = formatStr(now);
-            let penDateObj = new Date(now.getTime());
-
-            if (jenisVal === '4') {
-                penDateObj.setTime(penDateObj.getTime() - (23 * 60 + 59) * 60 * 1000);
-                document.getElementById('badge-duration').textContent = '23h 59m Delta';
-            } else if (jenisVal === '5') {
-                penDateObj.setTime(penDateObj.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
-                document.getElementById('badge-duration').textContent = '3d 23h 59m Delta';
-            } else if (['6', '7', '8'].includes(jenisVal)) {
-                penDateObj.setTime(penDateObj.getTime() - 45 * 60 * 1000);
-                document.getElementById('badge-duration').textContent = '45m Delta';
-            } else {
-                penDateObj.setTime(penDateObj.getTime() - 60 * 60 * 1000);
-                document.getElementById('badge-duration').textContent = '1h Delta';
-            }
-
-            document.getElementById('text-penyelesaian').textContent = selDate;
-            document.getElementById('text-penerimaan').textContent = formatStr(penDateObj);
+        function padTwo(n) {
+            return String(n).padStart(2, '0');
         }
 
-        // 8. Diff Card & AI Notes
+        function dateToDateTimeLocalString(d) {
+            if (!d || isNaN(d.getTime())) return '';
+            return `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())}T${padTwo(d.getHours())}:${padTwo(d.getMinutes())}`;
+        }
+
+        function dateToPortalDateTimeString(d) {
+            if (!d || isNaN(d.getTime())) return '';
+            return `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())}  ${padTwo(d.getHours())}:${padTwo(d.getMinutes())}`;
+        }
+
+        function calculateDeltaString(startDate, endDate) {
+            if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                return { deltaStr: '-- Delta', isNegative: false };
+            }
+            const diffMs = endDate.getTime() - startDate.getTime();
+            if (diffMs < 0) {
+                return { deltaStr: '⚠️ Penerimaan > Selesai', isNegative: true };
+            }
+            const diffMins = Math.floor(diffMs / (60 * 1000));
+            const days = Math.floor(diffMins / (24 * 60));
+            const hours = Math.floor((diffMins % (24 * 60)) / 60);
+            const mins = diffMins % 60;
+
+            const parts = [];
+            if (days > 0) parts.push(`${days}d`);
+            if (hours > 0) parts.push(`${hours}h`);
+            parts.push(`${mins}m`);
+            return { deltaStr: parts.join(' ') + ' Delta', isNegative: false };
+        }
+
+        function setTimeMode(mode) {
+            currentTimeMode = mode;
+            const isAuto = mode === 'auto';
+
+            const btnAuto = document.getElementById('btn-time-auto');
+            const btnManual = document.getElementById('btn-time-manual');
+            const boxAuto = document.getElementById('box-time-auto');
+            const boxManual = document.getElementById('box-time-manual');
+
+            if (btnAuto) btnAuto.className = isAuto ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+            if (btnManual) btnManual.className = !isAuto ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+
+            if (boxAuto) boxAuto.style.display = isAuto ? 'flex' : 'none';
+            if (boxManual) boxManual.style.display = !isAuto ? 'flex' : 'none';
+
+            if (isAuto) {
+                updateTimestamps();
+            } else {
+                syncManualFromAuto();
+            }
+        }
+
+        function syncManualFromAuto() {
+            updateTimestamps();
+            const inputPen = document.getElementById('input-manual-penerimaan');
+            const inputSel = document.getElementById('input-manual-penyelesaian');
+            if (inputPen && autoPenerimaanDate) {
+                inputPen.value = dateToDateTimeLocalString(autoPenerimaanDate);
+            }
+            if (inputSel && autoPenyelesaianDate) {
+                inputSel.value = dateToDateTimeLocalString(autoPenyelesaianDate);
+            }
+            onManualTimestampChange();
+        }
+
+        function setManualTimeToNow() {
+            const inputSel = document.getElementById('input-manual-penyelesaian');
+            if (inputSel) {
+                inputSel.value = dateToDateTimeLocalString(new Date());
+                onManualTimestampChange();
+            }
+        }
+
+        function onManualTimestampChange() {
+            const inputPen = document.getElementById('input-manual-penerimaan');
+            const inputSel = document.getElementById('input-manual-penyelesaian');
+            const badge = document.getElementById('badge-duration');
+            const warning = document.getElementById('manual-time-warning');
+
+            if (!inputPen || !inputSel || !inputPen.value || !inputSel.value) return;
+
+            const dPen = new Date(inputPen.value);
+            const dSel = new Date(inputSel.value);
+            const res = calculateDeltaString(dPen, dSel);
+
+            if (badge) {
+                badge.textContent = res.deltaStr;
+                if (res.isNegative) {
+                    badge.style.background = 'rgba(239, 68, 68, 0.2)';
+                    badge.style.color = '#f87171';
+                } else {
+                    badge.style.background = 'rgba(139, 92, 246, 0.15)';
+                    badge.style.color = '#c4b5fd';
+                }
+            }
+
+            if (warning) {
+                if (res.isNegative) {
+                    warning.textContent = '⚠️ Waktu penerimaan tidak boleh melebihi waktu selesai!';
+                    warning.style.color = '#f87171';
+                } else {
+                    warning.textContent = `✅ Manual Aktif (${res.deltaStr})`;
+                    warning.style.color = '#6ee7b7';
+                }
+            }
+        }
+
+        function updateTimestamps() {
+            const jenisSelect = document.getElementById('select-jenis');
+            const jenisVal = jenisSelect ? jenisSelect.value : '4';
+            const now = new Date();
+
+            autoPenyelesaianDate = new Date(now.getTime());
+            autoPenerimaanDate = new Date(now.getTime());
+
+            let deltaLabel = '1h Delta';
+
+            if (jenisVal === '4') {
+                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - (23 * 60 + 59) * 60 * 1000);
+                deltaLabel = '23h 59m Delta';
+            } else if (jenisVal === '5') {
+                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
+                deltaLabel = '3d 23h 59m Delta';
+            } else if (['6', '7', '8'].includes(jenisVal)) {
+                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - 45 * 60 * 1000);
+                deltaLabel = '45m Delta';
+            } else {
+                autoPenerimaanDate.setTime(autoPenerimaanDate.getTime() - 60 * 60 * 1000);
+                deltaLabel = '1h Delta';
+            }
+
+            if (currentTimeMode === 'auto') {
+                const badge = document.getElementById('badge-duration');
+                if (badge) {
+                    badge.textContent = deltaLabel;
+                    badge.style.background = 'rgba(139, 92, 246, 0.15)';
+                    badge.style.color = '#c4b5fd';
+                }
+                const textSel = document.getElementById('text-penyelesaian');
+                const textPen = document.getElementById('text-penerimaan');
+                if (textSel) textSel.textContent = dateToPortalDateTimeString(autoPenyelesaianDate);
+                if (textPen) textPen.textContent = dateToPortalDateTimeString(autoPenerimaanDate);
+            }
+        }
+
+        // 8. Diff Card & Raw Diff Evidence
+        let activeEvidenceTab = 'card';
+
+        function switchEvidenceTab(tab) {
+            activeEvidenceTab = tab;
+            const tabCard = document.getElementById('tab-diff-card');
+            const tabRaw = document.getElementById('tab-diff-raw');
+            const boxCard = document.getElementById('diff-card-container');
+            const boxRaw = document.getElementById('diff-raw-container');
+
+            if (tab === 'card') {
+                tabCard.className = 'btn-mini btn-mini-primary';
+                tabRaw.className = 'btn-mini btn-mini-secondary';
+                boxCard.style.display = 'block';
+                boxRaw.style.display = 'none';
+            } else {
+                tabCard.className = 'btn-mini btn-mini-secondary';
+                tabRaw.className = 'btn-mini btn-mini-primary';
+                boxCard.style.display = 'none';
+                boxRaw.style.display = 'block';
+                fetchRawDiff();
+            }
+        }
+
+        async function fetchRawDiff() {
+            const pre = document.getElementById('diff-raw-text');
+            const label = document.getElementById('raw-diff-commit-label');
+            if (!pre) return;
+            pre.textContent = 'Memuat git diff...';
+            try {
+                const res = await fetch('/api/raw-diff?repoPath=' + encodeURIComponent(currentRepoPath) + '&t=' + Date.now());
+                const data = await res.json();
+                if (data.success) {
+                    if (data.commit) {
+                        label.textContent = `Commit: ${data.commit.hash || ''} - ${data.commit.msg || ''}`;
+                    }
+                    const raw = data.diff || 'Tidak ada perubahan git terdeteksi (working tree bersih).';
+                    pre.innerHTML = formatDiffToHtml(raw);
+                } else {
+                    pre.textContent = 'Gagal memuat diff: ' + (data.error || 'Unknown error');
+                }
+            } catch (err) {
+                pre.textContent = 'Gagal menghubungi server: ' + err.message;
+            }
+        }
+
+        function formatDiffToHtml(diffText) {
+            const lines = diffText.split('\n');
+            return lines.map(line => {
+                const escaped = escapeHtml(line);
+                if (line.startsWith('+') && !line.startsWith('+++')) {
+                    return `<span style="color:#4ade80; background:rgba(74,222,128,0.08); display:block;">${escaped}</span>`;
+                } else if (line.startsWith('-') && !line.startsWith('---')) {
+                    return `<span style="color:#f87171; background:rgba(248,113,113,0.08); display:block;">${escaped}</span>`;
+                } else if (line.startsWith('@@')) {
+                    return `<span style="color:#a78bfa; font-weight:bold; display:block; padding:2px 0;">${escaped}</span>`;
+                } else if (line.startsWith('diff --git')) {
+                    return `<span style="color:#38bdf8; font-weight:bold; display:block; margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px;">${escaped}</span>`;
+                }
+                return `<span>${escaped}</span>`;
+            }).join('\n');
+        }
+
         async function generateDiffCard() {
             const btn = document.getElementById('btn-regen-card');
             btn.disabled = true;
@@ -1903,11 +2329,14 @@
                     img.style.display = 'block';
                     document.getElementById('diff-placeholder').style.display = 'none';
                 }
+                if (activeEvidenceTab === 'raw') {
+                    fetchRawDiff();
+                }
             } catch (err) {
                 console.error(err);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '⚡ Regenerate Diff Card';
+                btn.textContent = '⚡ Regenerate Card';
             }
         }
 
@@ -1950,6 +2379,23 @@
 
             const activeProf = getActiveProfile();
 
+            let waktuPenerimaan = '';
+            let waktuPenyelesaian = '';
+
+            if (currentTimeMode === 'manual') {
+                const inputPen = document.getElementById('input-manual-penerimaan');
+                const inputSel = document.getElementById('input-manual-penyelesaian');
+                if (inputPen && inputPen.value) {
+                    waktuPenerimaan = dateToPortalDateTimeString(new Date(inputPen.value));
+                }
+                if (inputSel && inputSel.value) {
+                    waktuPenyelesaian = dateToPortalDateTimeString(new Date(inputSel.value));
+                }
+            } else {
+                waktuPenerimaan = dateToPortalDateTimeString(autoPenerimaanDate);
+                waktuPenyelesaian = dateToPortalDateTimeString(autoPenyelesaianDate);
+            }
+
             const payload = {
                 role: currentTrack,
                 namaPengadu: document.getElementById('input-nama').value,
@@ -1961,7 +2407,9 @@
                 clickSimpan: clickSimpan,
                 portalUsername: activeProf.portalUsername || '01229',
                 portalPassword: activeProf.portalPassword || '123456',
-                repoPath: currentRepoPath
+                repoPath: currentRepoPath,
+                waktuPenerimaan,
+                waktuPenyelesaian
             };
 
             try {
