@@ -13,28 +13,33 @@ Sistem otomatisasi dan dashboard visual modern untuk mencatat dokumentasi pemeli
 ## ⚡ Fitur Utama
 
 1. **Dual-Track Workflow:**
-   - **Track Programmer:** Otomatis membaca `git log` dan `git diff` dari repositori aktif, menghasilkan kartu visual kode diff (**~300ms**), membuat catatan rilis formal (via Ollama `gemma:2b` atau parser deterministik), serta mengisi form dengan durasi pengerjaan presisi.
-   - **Track IT Support:** Dilengkapi 11 katalog template 1-klik untuk aduan harian rumah sakit (printer macet, krimping kabel LAN RJ45, reset akun SIMRS terkunci, ganti toner laserjet, dll) dan upload foto bukti pekerjaan.
+   - **Track Programmer:** Otomatis membaca `git log` dan `git diff` dari repositori aktif, menghasilkan kartu visual kode diff (**~300ms**), membuat catatan rilis formal (via Ollama `gemma:2b` atau parser deterministik), serta opsi **📸 Upload Foto Manual** yang dilengkapi **Analisis Multimodal AI Vision** (Google Gemini Vision / Ollama / OCR) untuk merangkum screenshot UI/error modul langsung ke kolom Isi Komplain.
+   - **Track IT Support:** Dilengkapi 11 katalog template 1-klik untuk aduan harian rumah sakit (printer macet, LAN putus, reset akun SIMRS, dll), upload foto bukti dengan deteksi screenshot otomatis, analisis cerdas Google Gemini Vision / OCR, serta tombol **📁 Pilih Foto Lain** untuk mengganti foto kapan saja dengan 1 klik.
 
 2. **📁 Multi-Project Repository Path Switcher:**
    - Secara otomatis mendeteksi project repositori tetangga dalam folder yang sama (misal: `fe_remedis_ranap`, `fe_remedis_rajal`, `rev_vault`, dll).
    - Mendukung input path manual fleksibel untuk Linux maupun Windows (`D:\Projects\...`).
    - Otomatis memperbarui riwayat commit, merender ulang kartu diff, dan menganalisis catatan rilis seketika saat berpindah project.
 
-3. **🔍 Searchable Combobox Dropdowns:**
+3. **⏱️ Patokan Hari Ini & Sakelar Acak Durasi (85% - 100%):**
+   - **Patokan Hari Ini:** Pilih dengan 1 klik apakah **Waktu Penyelesaian** adalah hari ini/sekarang (penerimaan dihitung mundur) atau **Waktu Penerimaan** adalah hari ini/sekarang (penyelesaian dihitung maju).
+   - **🎲 Acak Durasi (85% - 100%):** Toggle untuk mengacak rentang waktu pengerjaan (misal dari target 23 jam 59 menit menjadi ~20 jam 23 menit s/d 23 jam 59 menit) lengkap dengan tombol **🎲 Re-roll** agar interval tiket terlihat natural dan tidak monoton.
+   - Tersimpan otomatis di `localStorage` per preferensi pengguna.
+
+4. **🔍 Searchable Combobox Dropdowns:**
    - Filter pencarian instan pada dropdown **Dari Unit / Bagian** (92 Unit Live) dan **Jenis Aduan**.
    - Cukup ketik kode angka (`145`, `44`) atau nama ruangan (`IT`, `Farmasi`, `IGD`, `Kasir`).
 
-4. **👥 Multi-User Profile Switcher:**
+5. **👥 Multi-User Profile Switcher:**
    - Mendukung multi-pengguna (misal: Sigit, Muhammad Alfin, Sunardi, atau tambah profil baru).
    - Setiap pengguna menyimpan kredensial akun Si-Pangaduan, default unit, dan default jenis aduan yang tersimpan aman di `lunar_settings.json`.
 
-5. **➕ Custom Template Creator:**
+6. **➕ Custom Template Creator:**
    - Tombol `➕ Simpan Template Baru` memungkinkan menyimpan konfigurasi form dan teks komplain aktif menjadi template permanen dengan 1 klik.
 
-6. **🛡️ Zero-Float & DateRangePicker Invariants:**
-   - Menghitung rentang tanggal dan jam pengerjaan secara presisi matematis tanpa float rounding error (23h 59m untuk aplikasi, 4d untuk modul baru, 45m untuk jaringan/hardware).
-   - Mensinkronkan nilai langsung ke jQuery DateRangePicker portal.
+7. **🛡️ Zero-Float & DateRangePicker Invariants:**
+   - Menghitung rentang tanggal dan jam pengerjaan secara presisi matematis tanpa float rounding error.
+   - Mensinkronkan nilai langsung ke jQuery DateRangePicker portal (`#reservation3` dan `#reservation31`).
 
 ---
 

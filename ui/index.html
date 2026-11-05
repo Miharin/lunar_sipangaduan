@@ -17,19 +17,31 @@
         rel="stylesheet">
     <style>
         :root {
-            --bg-base: #09080e;
-            --bg-surface: #120f1a;
-            --bg-card: rgba(23, 19, 33, 0.75);
-            --bg-card-hover: rgba(30, 25, 43, 0.95);
-            --border-subtle: rgba(255, 255, 255, 0.08);
-            --border-active: rgba(225, 29, 72, 0.4);
+            --bg-base: #07060b;
+            --bg-surface: #110d1c;
+            --bg-card: #181326;
+            --bg-card-hover: #221b35;
+            --bg-elevated: #201932;
+            --bg-elevated-high: #2b2144;
+            --bg-sunken: #0b0914;
             --crimson-glow: #e11d48;
             --crimson-light: #fb7185;
             --violet-glow: #8b5cf6;
+            --violet-light: #a78bfa;
             --emerald-glow: #10b981;
+            --emerald-light: #6ee7b7;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
             --text-sub: #64748b;
+            
+            /* Sanctuary Elevation Depth System (Zero-Outline Architecture) */
+            --shadow-elevation-1: 0 4px 14px rgba(0, 0, 0, 0.45);
+            --shadow-elevation-2: 0 8px 24px -2px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.4);
+            --shadow-elevation-3: 0 16px 40px -4px rgba(0, 0, 0, 0.75), 0 4px 14px rgba(0, 0, 0, 0.45);
+            --shadow-elevation-4: 0 28px 70px -8px rgba(0, 0, 0, 0.9), 0 6px 20px rgba(0, 0, 0, 0.6);
+            --shadow-crimson-glow: 0 6px 22px rgba(225, 29, 72, 0.45);
+            --shadow-crimson-active: 0 0 0 2px var(--crimson-glow), 0 0 22px rgba(225, 29, 72, 0.35);
+            --shadow-sunken: inset 0 2px 6px rgba(0, 0, 0, 0.65);
         }
 
         * {
@@ -45,18 +57,20 @@
             color: var(--text-main);
             min-height: 100vh;
             background-image:
-                radial-gradient(circle at 15% 10%, rgba(225, 29, 72, 0.12) 0%, transparent 40%),
-                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 40%);
+                radial-gradient(circle at 15% 10%, rgba(225, 29, 72, 0.14) 0%, transparent 45%),
+                radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.14) 0%, transparent 45%),
+                radial-gradient(circle at 50% 50%, rgba(15, 12, 24, 0.9) 0%, #07060b 100%);
             display: flex;
             flex-direction: column;
             overflow-x: hidden;
         }
 
         header {
-            background: rgba(14, 11, 20, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-subtle);
-            padding: 14px 32px;
+            background: rgba(15, 11, 23, 0.94);
+            backdrop-filter: blur(16px);
+            border: none;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+            padding: 16px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -74,13 +88,13 @@
         .brand-icon {
             font-size: 24px;
             background: linear-gradient(135deg, #e11d48, #8b5cf6);
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 20px rgba(225, 29, 72, 0.4);
+            box-shadow: 0 6px 20px rgba(225, 29, 72, 0.45);
         }
 
         .brand-text h1 {
@@ -104,23 +118,25 @@
         }
 
         .pill {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
-            padding: 6px 12px;
+            background: var(--bg-elevated);
+            border: none;
+            padding: 7px 14px;
             border-radius: 9999px;
             font-size: 12px;
             display: flex;
             align-items: center;
-            gap: 6px;
-            color: var(--text-muted);
+            gap: 8px;
+            color: var(--text-main);
+            box-shadow: var(--shadow-elevation-1);
+            font-weight: 600;
         }
 
         .pill-dot {
-            width: 7px;
-            height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--emerald-glow);
-            box-shadow: 0 0 8px var(--emerald-glow);
+            box-shadow: 0 0 10px var(--emerald-glow);
         }
 
         main {
@@ -131,17 +147,18 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 22px;
         }
 
         .track-tabs {
-            background: rgba(18, 15, 26, 0.8);
-            border: 1px solid var(--border-subtle);
+            background: var(--bg-sunken);
+            border: none;
             padding: 6px;
-            border-radius: 14px;
+            border-radius: 16px;
             display: inline-flex;
             gap: 8px;
             align-self: flex-start;
+            box-shadow: var(--shadow-sunken);
         }
 
         .tab-btn {
@@ -149,9 +166,9 @@
             border: none;
             color: var(--text-muted);
             padding: 10px 24px;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
@@ -162,12 +179,12 @@
         .tab-btn.active {
             background: linear-gradient(135deg, #e11d48, #be123c);
             color: #fff;
-            box-shadow: 0 4px 16px rgba(225, 29, 72, 0.35);
+            box-shadow: 0 6px 20px rgba(225, 29, 72, 0.45);
         }
 
         .tab-btn:hover:not(.active) {
             color: var(--text-main);
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .workspace-grid {
@@ -185,25 +202,25 @@
 
         .glass-card {
             background: var(--bg-card);
-            border: 1px solid var(--border-subtle);
-            border-radius: 18px;
-            padding: 22px;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+            border: none;
+            border-radius: 22px;
+            padding: 24px;
+            backdrop-filter: blur(20px);
+            box-shadow: var(--shadow-elevation-3);
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            gap: 20px;
         }
 
         .card-title {
-            font-size: 14px;
-            font-weight: 700;
+            font-size: 14.5px;
+            font-weight: 800;
             letter-spacing: -0.2px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid var(--border-subtle);
-            padding-bottom: 12px;
+            border: none;
+            padding-bottom: 2px;
         }
 
         .field-group {
@@ -214,7 +231,7 @@
 
         .field-label {
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-muted);
             display: flex;
             justify-content: space-between;
@@ -224,22 +241,23 @@
         .input-text,
         .input-select,
         .input-textarea {
-            background: rgba(14, 11, 20, 0.9);
-            border: 1px solid var(--border-subtle);
+            background: var(--bg-sunken);
+            border: none;
             color: var(--text-main);
-            padding: 11px 14px;
-            border-radius: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
             font-size: 13px;
             outline: none;
-            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sunken);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             width: 100%;
         }
 
         .input-text:focus,
         .input-select:focus,
         .input-textarea:focus {
-            border-color: var(--crimson-glow);
-            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+            background: #110d1c;
+            box-shadow: var(--shadow-crimson-active);
         }
 
         .input-textarea {
@@ -251,13 +269,14 @@
         }
 
         .time-card {
-            background: rgba(10, 8, 15, 0.7);
-            border: 1px dashed var(--border-subtle);
-            border-radius: 12px;
-            padding: 12px 16px;
+            background: var(--bg-sunken);
+            border: none;
+            border-radius: 16px;
+            padding: 16px 18px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
+            box-shadow: var(--shadow-sunken);
         }
 
         .time-row {
@@ -277,26 +296,28 @@
         }
 
         .time-badge {
-            background: rgba(139, 92, 246, 0.15);
-            color: #c4b5fd;
-            padding: 2px 8px;
+            background: rgba(139, 92, 246, 0.22);
+            color: #ddd6fe;
+            padding: 3px 10px;
             border-radius: 6px;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
             align-self: flex-start;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.2);
+            border: none;
         }
 
         /* 1-Click Template Grid */
         .template-section {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
 
         .template-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 12px;
+            gap: 14px;
             max-height: 290px;
             overflow-y: auto;
             padding-right: 4px;
@@ -312,29 +333,28 @@
         }
 
         .template-card {
-            background: rgba(16, 13, 23, 0.85);
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
-            padding: 12px 14px;
+            background: var(--bg-elevated);
+            border: none;
+            border-radius: 14px;
+            padding: 14px 16px;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            gap: 8px;
+            gap: 10px;
+            box-shadow: var(--shadow-elevation-1);
         }
 
         .template-card:hover {
-            border-color: var(--crimson-glow);
             background: var(--bg-card-hover);
             transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(225, 29, 72, 0.15);
+            box-shadow: 0 10px 24px rgba(225, 29, 72, 0.2), 0 4px 12px rgba(0, 0, 0, 0.5);
         }
 
         .template-card.active {
-            border-color: var(--crimson-light);
-            background: rgba(225, 29, 72, 0.08);
-            box-shadow: 0 0 0 1px var(--crimson-light);
+            background: #2b172a;
+            box-shadow: 0 0 0 2px var(--crimson-light), 0 8px 24px rgba(225, 29, 72, 0.35);
         }
 
         .tpl-header {
@@ -354,47 +374,54 @@
         }
 
         .tpl-badge {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 6px;
-            border-radius: 4px;
-            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.08);
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-weight: 600;
+            border: none;
         }
 
         .tpl-actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             margin-top: 4px;
         }
 
         .btn-mini {
-            padding: 4px 10px;
+            padding: 5px 12px;
             font-size: 11px;
-            border-radius: 6px;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
-            font-weight: 600;
+            font-weight: 700;
             transition: all 0.15s ease;
         }
 
         .btn-mini-primary {
-            background: rgba(225, 29, 72, 0.2);
-            color: #fb7185;
-            border: 1px solid rgba(225, 29, 72, 0.3);
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4);
+            border: none;
         }
 
         .btn-mini-primary:hover {
-            background: var(--crimson-glow);
-            color: #fff;
+            background: #f43f5e;
+            box-shadow: 0 4px 14px rgba(225, 29, 72, 0.6);
+            transform: translateY(-1px);
         }
 
         .btn-mini-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-muted);
+            background: var(--bg-elevated);
+            color: var(--text-main);
+            box-shadow: var(--shadow-elevation-1);
+            border: none;
         }
 
         .btn-mini-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: var(--text-main);
+            background: var(--bg-elevated-high);
+            color: #fff;
+            transform: translateY(-1px);
         }
 
         .btn-icon-subtle {
@@ -402,9 +429,9 @@
             border: none;
             font-size: 13px;
             cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 4px;
-            opacity: 0.7;
+            padding: 3px 6px;
+            border-radius: 6px;
+            opacity: 0.8;
             transition: all 0.15s ease;
         }
 
@@ -425,31 +452,32 @@
         }
 
         .search-select-trigger {
-            background: rgba(14, 11, 20, 0.95);
-            border: 1px solid var(--border-subtle);
+            background: var(--bg-sunken);
+            border: none;
             color: var(--text-main);
-            padding: 10px 14px;
-            border-radius: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
             font-size: 13px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
             user-select: none;
+            box-shadow: var(--shadow-sunken);
             transition: all 0.2s ease;
         }
 
         .search-select-trigger:hover,
         .search-select-trigger.active {
-            border-color: var(--crimson-glow);
-            box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.15);
+            background: #110d1c;
+            box-shadow: var(--shadow-crimson-active);
         }
 
         .search-select-trigger .trigger-text {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .search-select-trigger .trigger-arrow {
@@ -466,19 +494,19 @@
 
         .search-select-dropdown {
             position: absolute;
-            top: calc(100% + 6px);
+            top: calc(100% + 8px);
             left: 0;
             right: 0;
-            background: #110d19;
-            border: 1px solid rgba(225, 29, 72, 0.35);
-            border-radius: 12px;
-            padding: 8px;
-            box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
+            background: #171126;
+            border: none;
+            border-radius: 18px;
+            padding: 12px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.92), 0 0 35px rgba(225, 29, 72, 0.22);
             z-index: 100;
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(24px);
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
             animation: fadeInDown 0.15s ease-out;
         }
 
@@ -497,16 +525,16 @@
         .search-box-container {
             display: flex;
             align-items: center;
-            background: rgba(22, 17, 31, 0.9);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 6px 10px;
+            background: var(--bg-sunken);
+            border: none;
+            border-radius: 10px;
+            padding: 8px 12px;
             gap: 8px;
+            box-shadow: var(--shadow-sunken);
         }
 
         .search-box-container:focus-within {
-            border-color: var(--crimson-glow);
-            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
+            box-shadow: 0 0 0 2px var(--crimson-glow), inset 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .search-box-input {
@@ -524,13 +552,13 @@
             color: var(--text-muted);
             font-size: 11px;
             cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 4px;
+            padding: 2px 6px;
+            border-radius: 6px;
         }
 
         .search-box-clear:hover {
             color: #fff;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.12);
         }
 
         .search-options-list {
@@ -538,7 +566,7 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
             margin-top: 4px;
         }
 
@@ -552,8 +580,8 @@
         }
 
         .search-option-item {
-            padding: 8px 12px;
-            border-radius: 8px;
+            padding: 9px 14px;
+            border-radius: 10px;
             font-size: 12.5px;
             cursor: pointer;
             display: flex;
@@ -561,28 +589,37 @@
             align-items: center;
             color: var(--text-muted);
             transition: all 0.12s ease;
+            border: none;
         }
 
         .search-option-item:hover,
         .search-option-item.highlighted {
-            background: rgba(225, 29, 72, 0.15);
+            background: var(--bg-elevated);
             color: var(--text-main);
         }
 
         .search-option-item.selected {
-            background: rgba(225, 29, 72, 0.25);
+            background: linear-gradient(135deg, #e11d48, #be123c);
             color: #fff;
-            font-weight: 600;
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4);
         }
 
         .search-option-item .item-code {
             font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
-            background: rgba(255, 255, 255, 0.06);
-            padding: 2px 6px;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 3px 8px;
+            border-radius: 6px;
             color: var(--crimson-light);
             margin-right: 8px;
+            font-weight: 700;
+            border: none;
+        }
+
+        .search-option-item.selected .item-code {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
         }
 
         .search-option-empty {
@@ -594,11 +631,12 @@
 
         .template-filter-tabs {
             display: inline-flex;
-            background: rgba(14, 11, 20, 0.8);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 2px;
-            gap: 2px;
+            background: var(--bg-sunken);
+            border: none;
+            border-radius: 10px;
+            padding: 3px;
+            gap: 4px;
+            box-shadow: var(--shadow-sunken);
         }
 
         .tpl-filter-btn {
@@ -607,55 +645,60 @@
             color: var(--text-muted);
             font-size: 11px;
             font-weight: 600;
-            padding: 3px 8px;
-            border-radius: 6px;
+            padding: 5px 12px;
+            border-radius: 7px;
             cursor: pointer;
             transition: all 0.15s ease;
         }
 
         .tpl-filter-btn:hover {
             color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .tpl-filter-btn.active {
-            background: rgba(225, 29, 72, 0.25);
-            color: #fb7185;
+            background: linear-gradient(135deg, #e11d48, #be123c);
+            color: #fff;
             font-weight: 700;
+            box-shadow: 0 2px 10px rgba(225, 29, 72, 0.4);
         }
 
         .diff-preview-box {
-            background: #0d0b13;
-            border: 1px solid var(--border-subtle);
-            border-radius: 12px;
+            background: var(--bg-sunken);
+            border: none;
+            border-radius: 16px;
             overflow: hidden;
             position: relative;
+            box-shadow: var(--shadow-sunken);
         }
 
         .diff-preview-box img {
             width: 100%;
             height: auto;
             display: block;
-            border-radius: 12px;
+            border-radius: 16px;
         }
 
         .project-card {
-            background: rgba(16, 12, 24, 0.85);
-            border: 1px solid rgba(139, 92, 246, 0.25);
-            border-radius: 12px;
-            padding: 12px 14px;
+            background: var(--bg-elevated);
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
+            box-shadow: var(--shadow-elevation-2);
         }
 
         .project-path-line {
             font-family: 'JetBrains Mono', monospace;
             font-size: 11.5px;
-            color: var(--text-sub);
-            background: rgba(10, 8, 15, 0.7);
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            background: var(--bg-sunken);
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: none;
+            box-shadow: var(--shadow-sunken);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -664,31 +707,34 @@
         }
 
         .project-path-line:hover {
-            color: var(--text-main);
-            border-color: rgba(139, 92, 246, 0.4);
-            background: rgba(139, 92, 246, 0.08);
+            color: #fff;
+            background: #181228;
+            box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.5), inset 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .discovered-project-item {
-            background: rgba(22, 17, 31, 0.9);
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 8px 12px;
+            background: var(--bg-sunken);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
+            box-shadow: var(--shadow-sunken);
             transition: all 0.15s ease;
         }
 
         .discovered-project-item:hover {
-            border-color: var(--crimson-glow);
-            background: rgba(225, 29, 72, 0.12);
+            background: var(--bg-elevated);
+            box-shadow: var(--shadow-elevation-1);
+            transform: translateY(-1px);
         }
 
         .discovered-project-item.active {
-            border-color: #a78bfa;
-            background: rgba(167, 139, 250, 0.15);
+            background: rgba(139, 92, 246, 0.25);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(139, 92, 246, 0.35);
         }
 
         .diff-placeholder {
@@ -703,15 +749,15 @@
         }
 
         .bottom-bar {
-            background: rgba(18, 14, 25, 0.9);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border-subtle);
-            border-radius: 16px;
-            padding: 14px 28px;
+            background: rgba(22, 17, 34, 0.95);
+            backdrop-filter: blur(24px);
+            border: none;
+            border-radius: 20px;
+            padding: 16px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: var(--shadow-elevation-4), 0 0 40px rgba(225, 29, 72, 0.15);
             position: sticky;
             bottom: 20px;
             z-index: 40;
@@ -720,7 +766,7 @@
         .btn {
             border: none;
             padding: 11px 22px;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 13px;
             font-weight: 700;
             cursor: pointer;
@@ -733,40 +779,46 @@
         .btn-primary {
             background: linear-gradient(135deg, #e11d48, #be123c);
             color: #fff;
-            box-shadow: 0 4px 18px rgba(225, 29, 72, 0.4);
+            box-shadow: 0 6px 20px rgba(225, 29, 72, 0.45);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(225, 29, 72, 0.55);
+            box-shadow: 0 10px 28px rgba(225, 29, 72, 0.6);
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--border-subtle);
+            background: var(--bg-elevated);
+            border: none;
             color: var(--text-main);
+            box-shadow: var(--shadow-elevation-1);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--bg-elevated-high);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-elevation-2);
+            color: #fff;
         }
 
         .btn-emerald {
             background: linear-gradient(135deg, #059669, #047857);
             color: #fff;
-            box-shadow: 0 4px 18px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
         }
 
         .btn-emerald:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+            box-shadow: 0 10px 28px rgba(16, 185, 129, 0.5);
+            background: linear-gradient(135deg, #10b981, #059669);
         }
 
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(5, 4, 8, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(5, 4, 8, 0.88);
+            backdrop-filter: blur(12px);
             display: none;
             justify-content: center;
             align-items: center;
@@ -774,14 +826,14 @@
         }
 
         .modal-content {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-active);
-            border-radius: 20px;
-            padding: 28px 32px;
+            background: #161224;
+            border: none;
+            border-radius: 24px;
+            padding: 30px 34px;
             display: flex;
             flex-direction: column;
-            gap: 18px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            gap: 20px;
+            box-shadow: 0 30px 80px -10px rgba(0, 0, 0, 0.95), 0 0 50px rgba(225, 29, 72, 0.2);
             max-width: 580px;
             width: 90%;
             max-height: 85vh;
@@ -804,20 +856,21 @@
         }
 
         .dropzone {
-            border: 2px dashed var(--border-subtle);
-            border-radius: 12px;
-            padding: 24px;
+            border: none;
+            border-radius: 18px;
+            padding: 28px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
-            background: rgba(12, 10, 18, 0.5);
+            transition: all 0.25s ease;
+            background: radial-gradient(circle at center, rgba(34, 26, 52, 0.7) 0%, rgba(14, 11, 20, 0.95) 100%);
+            box-shadow: var(--shadow-sunken);
         }
 
         .dropzone:hover,
         .dropzone.drag-over {
-            border-color: var(--crimson-glow);
-            background: rgba(225, 29, 72, 0.08);
-            box-shadow: 0 0 16px rgba(225, 29, 72, 0.15);
+            background: radial-gradient(circle at center, rgba(225, 29, 72, 0.22) 0%, rgba(25, 18, 36, 0.98) 100%);
+            box-shadow: 0 0 35px rgba(225, 29, 72, 0.35), inset 0 0 20px rgba(225, 29, 72, 0.15);
+            transform: scale(1.01);
         }
     </style>
 </head>
@@ -871,7 +924,7 @@
                 <div class="card-title">
                     <span>📋 Formulir Pengaduan Config</span>
                     <span id="badge-track" class="pill"
-                        style="color: var(--crimson-light); border-color: rgba(225, 29, 72, 0.3);">Programmer</span>
+                        style="background: rgba(225, 29, 72, 0.22); color: #fda4af; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25); border: none;">Programmer</span>
                 </div>
 
                 <div class="field-group">
@@ -947,11 +1000,11 @@
                             <span class="time-badge" id="badge-duration">23h 59m Delta</span>
                         </div>
                         <div
-                            style="display:flex; gap:3px; background:rgba(0,0,0,0.35); padding:2px; border-radius:8px; border:1px solid var(--border-subtle);">
+                            style="display:flex; gap:3px; background:var(--bg-sunken); padding:3px; border-radius:10px; box-shadow:var(--shadow-sunken); border:none;">
                             <button type="button" id="btn-time-auto" class="btn-mini btn-mini-primary"
-                                style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('auto')">⚡ Auto</button>
+                                style="padding:3px 10px; font-size:11px;" onclick="setTimeMode('auto')">⚡ Auto</button>
                             <button type="button" id="btn-time-manual" class="btn-mini btn-mini-secondary"
-                                style="padding:2px 8px; font-size:11px;" onclick="setTimeMode('manual')">✏️
+                                style="padding:3px 10px; font-size:11px;" onclick="setTimeMode('manual')">✏️
                                 Manual</button>
                         </div>
                     </div>
@@ -965,6 +1018,39 @@
                         <div class="time-row">
                             <span>Waktu Penyelesaian:</span>
                             <span id="text-penyelesaian">Calculating...</span>
+                        </div>
+                    </div>
+
+                    <!-- Timestamp Anchor & Random Delta Controls (Available for both modes) -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px 12px; background:rgba(255,255,255,0.02); border-radius:10px; flex-wrap:wrap; gap:8px; border:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-size:11px; color:var(--text-sub);">🎯 Patokan Hari Ini:</span>
+                            <div style="display:flex; gap:3px; background:var(--bg-sunken); padding:3px; border-radius:10px; box-shadow:var(--shadow-sunken); border:none;">
+                                <button type="button" id="btn-anchor-selesai" class="btn-mini btn-mini-primary"
+                                    style="padding:3px 10px; font-size:11px;" onclick="setTimestampAnchor('selesai')"
+                                    title="Waktu Penyelesaian adalah Hari Ini / Sekarang, Waktu Penerimaan dihitung mundur">
+                                    🏁 Selesai Hari Ini
+                                </button>
+                                <button type="button" id="btn-anchor-terima" class="btn-mini btn-mini-secondary"
+                                    style="padding:3px 10px; font-size:11px;" onclick="setTimestampAnchor('terima')"
+                                    title="Waktu Penerimaan adalah Hari Ini / Sekarang, Waktu Penyelesaian dihitung maju">
+                                    📥 Terima Hari Ini
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <label style="display:flex; align-items:center; gap:5px; font-size:11px; cursor:pointer; user-select:none; color:var(--text-main);"
+                                title="Acak interval waktu pengerjaan antara 85% s/d 100% dari target durasi (misal ~20h 23m s/d 23h 59m)">
+                                <input type="checkbox" id="toggle-random-delta" onchange="toggleRandomDelta(this.checked)"
+                                    style="accent-color:var(--crimson); cursor:pointer;">
+                                <span style="font-weight:600;">🎲 Acak (85-100%)</span>
+                            </label>
+                            <button type="button" id="btn-reroll-delta" class="btn-mini btn-mini-secondary"
+                                style="display:none; padding:2px 6px; font-size:10px; color:#c4b5fd;"
+                                onclick="rerollRandomDelta()" title="Acak ulang variasi durasi baru">
+                                🎲 Re-roll
+                            </button>
                         </div>
                     </div>
 
@@ -995,11 +1081,11 @@
                                 oninput="onManualTimestampChange()">
                         </div>
                         <div
-                            style="display:flex; justify-content:space-between; align-items:center; margin-top:2px; padding-top:6px; border-top:1px dashed var(--border-subtle);">
+                            style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; padding:8px 10px; background:rgba(255,255,255,0.02); border-radius:8px; border:none;">
                             <span id="manual-time-warning" style="font-size:11px; color:var(--text-muted);">Pilih
                                 tanggal & jam manual</span>
                             <button type="button" class="btn-mini btn-mini-secondary"
-                                style="font-size:10.5px; padding:2px 8px;" onclick="syncManualFromAuto()">🔄 Reset ke
+                                style="font-size:10.5px; padding:3px 10px;" onclick="syncManualFromAuto()">🔄 Reset ke
                                 Auto Delta</button>
                         </div>
                     </div>
@@ -1026,9 +1112,9 @@
                             <span style="font-size:12.5px; font-weight:700; color:var(--text-main);">📁 Project /
                                 Repositori:</span>
                             <span id="badge-active-repo" class="pill"
-                                style="color:#a78bfa; border-color:rgba(167, 139, 250, 0.35); font-weight:700; background:rgba(167, 139, 250, 0.1);">fe_remedis_ranap</span>
+                                style="background: rgba(139, 92, 246, 0.22); color: #ddd6fe; font-weight: 700; box-shadow: 0 2px 8px rgba(139, 92, 246, 0.25); border: none;">fe_remedis_ranap</span>
                         </div>
-                        <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:11px;"
+                        <button type="button" class="btn btn-secondary" style="padding:6px 14px; font-size:11px;"
                             onclick="openProjectModal()">
                             📂 Ganti Project / Path Lain
                         </button>
@@ -1038,9 +1124,9 @@
                         /home/miharin/Documents/Project/fe_remedis_ranap
                     </div>
                     <div id="programmer-banner" class="pill"
-                        style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25); border-radius: 8px; justify-content: space-between; width:100%; margin-top:2px;">
+                        style="background: rgba(139, 92, 246, 0.16); box-shadow: var(--shadow-elevation-1); border-radius: 10px; justify-content: space-between; width:100%; margin-top:2px; border: none;">
                         <span id="label-commit">Commit: Membaca riwayat git...</span>
-                        <span style="color: #a855f7; font-size:11px; font-weight:700;">Git Auto-Sync</span>
+                        <span style="color: #c4b5fd; font-size:11px; font-weight:700;">Git Auto-Sync</span>
                     </div>
                 </div>
 
@@ -1076,19 +1162,35 @@
                         placeholder="Tuliskan rincian perbaikan atau pekerjaan IT..."></textarea>
                 </div>
 
-                <!-- Programmer Evidence Section (Diff Card & Raw Diff) -->
+                <!-- Programmer Evidence Section (Diff Card, Raw Diff, & Photo Upload Option) -->
                 <div id="programmer-evidence-section" class="field-group">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
                         <div style="display:flex; gap:6px;">
                             <button id="tab-diff-card" type="button" class="btn-mini btn-mini-primary"
                                 onclick="switchEvidenceTab('card')">🖼️ Diff Card</button>
                             <button id="tab-diff-raw" type="button" class="btn-mini btn-mini-secondary"
                                 onclick="switchEvidenceTab('raw')">📄 Raw Git Diff</button>
+                            <button id="tab-prog-photo" type="button" class="btn-mini btn-mini-secondary"
+                                onclick="switchEvidenceTab('photo')">📸 Upload Foto Manual</button>
                         </div>
-                        <button id="btn-regen-card" type="button" class="btn btn-secondary"
-                            style="padding: 4px 10px; font-size:11px;" onclick="generateDiffCard()">
-                            ⚡ Regenerate Card
-                        </button>
+                        <div style="display:flex; gap:6px;">
+                            <button id="btn-regen-card" type="button" class="btn btn-secondary"
+                                style="padding: 4px 10px; font-size:11px;" onclick="generateDiffCard()">
+                                ⚡ Regenerate Card
+                            </button>
+                            <button id="btn-choose-another-prog" type="button" class="btn-mini btn-mini-primary"
+                                style="display:none; padding:4px 10px; font-size:11px;" onclick="chooseAnotherProgPhoto()">
+                                📁 Pilih Foto Lain
+                            </button>
+                            <button id="btn-reanalyze-prog" type="button" class="btn-mini btn-mini-primary"
+                                style="display:none; padding:4px 10px; font-size:11px;" onclick="triggerAnalyzeProgImage()">
+                                🔍 Analisis Ulang AI
+                            </button>
+                            <button id="btn-clear-prog-photo" type="button" class="btn-mini btn-mini-secondary"
+                                style="display:none; padding:4px 10px; font-size:11px; color:#fb7185;" onclick="clearProgPhoto()">
+                                🗑️ Hapus Foto
+                            </button>
+                        </div>
                     </div>
 
                     <div id="diff-card-container" class="diff-preview-box">
@@ -1107,7 +1209,61 @@
                                 Ulang Diff</button>
                         </div>
                         <pre id="diff-raw-text"
-                            style="background:#09080e; color:#e2e8f0; padding:12px; border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5; max-height:360px; overflow:auto; white-space:pre-wrap; border:1px solid var(--border-subtle);"></pre>
+                            style="background:var(--bg-sunken); color:#e2e8f0; padding:14px; border-radius:12px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.5; max-height:360px; overflow:auto; white-space:pre-wrap; box-shadow:var(--shadow-sunken); border:none;"></pre>
+                    </div>
+
+                    <!-- Programmer Photo Upload Container -->
+                    <div id="prog-photo-container" style="display:none; flex-direction:column; gap:10px;">
+                        <div id="prog-upload-dropzone" class="dropzone" onclick="document.getElementById('prog-file-upload').click()">
+                            <input type="file" id="prog-file-upload" style="display:none;" accept="image/*"
+                                onchange="handleProgFileInput(this.files[0])">
+                            <div style="display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;">
+                                <span style="font-size:32px;">📷</span>
+                                <p style="font-weight:700; font-size:13px; color:var(--text-main); margin:0;">
+                                    Klik atau Drag & Drop Foto Bukti Programmer di Sini
+                                </p>
+                                <p style="font-size:11.5px; color:var(--text-sub); margin:0;">
+                                    Lampirkan screenshot modul/fitur alih-alih Git Diff. Tekan <kbd
+                                        style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; color:var(--crimson-light);">Ctrl
+                                        + V</kbd> untuk paste screenshot!
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="prog-photo-preview"
+                            style="display:none; flex-direction:column; gap:12px; background:var(--bg-elevated); box-shadow:var(--shadow-elevation-2); border-radius:16px; padding:14px; border:none;">
+                            <div style="position:relative; width:100%; max-height:320px; overflow:hidden; border-radius:10px; display:flex; justify-content:center; align-items:center; background:var(--bg-sunken); box-shadow:var(--shadow-sunken); border:none;">
+                                <img id="prog-preview-img" style="max-width:100%; max-height:320px; object-fit:contain; border-radius:8px;" alt="Bukti Foto Programmer">
+
+                                <!-- Analysis In-Progress Overlay -->
+                                <div id="prog-analyzing-overlay"
+                                    style="display:none; position:absolute; inset:0; background:rgba(9,8,14,0.88); backdrop-filter:blur(4px); flex-direction:column; justify-content:center; align-items:center; gap:10px;">
+                                    <div class="spinner" style="width:32px; height:32px; border-width:3px;"></div>
+                                    <span style="font-size:13px; font-weight:700; color:var(--crimson-light);">🤖
+                                        Menganalisis tangkapan layar programmer...</span>
+                                    <span style="font-size:11px; color:var(--text-muted);">Mendeteksi modul / error & menyusun ringkasan ke Isi Komplain</span>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; background:rgba(255,255,255,0.02); border-radius:10px; padding:8px 12px; border:none;">
+                                <div style="display:flex; align-items:center; gap:8px; color:var(--text-muted);">
+                                    <span>📄</span>
+                                    <span id="prog-img-name" style="font-family:'JetBrains Mono',monospace;">programmer_evidence.png</span>
+                                    <span class="pill" style="background:rgba(16, 185, 129, 0.22); color:#6ee7b7; box-shadow:0 2px 8px rgba(16, 185, 129, 0.25); font-size:10px; padding:3px 8px; border:none;">Foto Aktif Sebagai Bukti</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <button type="button" class="btn-mini btn-mini-primary" style="font-size:10.5px; padding:3px 10px;" onclick="chooseAnotherProgPhoto()">
+                                        📁 Ganti Foto Lain
+                                    </button>
+                                    <span id="prog-ai-badge" class="pill"
+                                        style="display:none; background:rgba(16, 185, 129, 0.22); color:#6ee7b7; box-shadow:0 2px 8px rgba(16, 185, 129, 0.25); font-size:10.5px; border:none;">
+                                        ✨ Dianalisis oleh Lunar Vision
+                                    </span>
+                                    <button type="button" class="btn-mini btn-mini-secondary" style="font-size:10.5px; padding:3px 10px; color:#fb7185;" onclick="clearProgPhoto()">
+                                        🗑️ Hapus Foto
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1119,21 +1275,25 @@
                             <span style="font-size:12px; font-weight:700; color:var(--text-main);">📸 Foto Bukti Kendala
                                 Hardware / IT</span>
                             <span id="badge-support-status" class="pill"
-                                style="display:none; font-size:10.5px; color:#6ee7b7; border-color:rgba(110,231,183,0.3);">Foto
+                                style="display:none; font-size:10.5px; background:rgba(16, 185, 129, 0.22); color:#6ee7b7; box-shadow:0 2px 8px rgba(16, 185, 129, 0.25); border:none;">Foto
                                 Terlampir</span>
                         </div>
                         <div style="display:flex; gap:6px;">
                             <button type="button" id="btn-fetch-recent-shot" class="btn-mini btn-mini-secondary"
-                                style="padding:3px 8px; font-size:11px;" onclick="checkRecentScreenshot()">
+                                style="padding:4px 10px; font-size:11px;" onclick="checkRecentScreenshot()">
                                 📸 Screenshot Terakhir
                             </button>
+                            <button type="button" id="btn-choose-another-support" class="btn-mini btn-mini-primary"
+                                style="display:none; padding:4px 10px; font-size:11px;" onclick="chooseAnotherSupportPhoto()">
+                                📁 Pilih Foto Lain
+                            </button>
                             <button type="button" id="btn-reanalyze-support" class="btn-mini btn-mini-primary"
-                                style="display:none; padding:3px 8px; font-size:11px;"
+                                style="display:none; padding:4px 10px; font-size:11px;"
                                 onclick="triggerAnalyzeSupportImage()">
                                 🔍 Analisis Ulang AI
                             </button>
                             <button type="button" id="btn-clear-support-img" class="btn-mini btn-mini-secondary"
-                                style="display:none; padding:3px 8px; font-size:11px; color:#fb7185;"
+                                style="display:none; padding:4px 10px; font-size:11px; color:#fb7185;"
                                 onclick="clearSupportImage()">
                                 🗑️ Hapus Foto
                             </button>
@@ -1162,17 +1322,17 @@
 
                     <!-- Preview Container when photo is active -->
                     <div id="support-preview-container"
-                        style="display:none; flex-direction:column; gap:10px; background:rgba(0,0,0,0.35); border:1px solid var(--border-subtle); border-radius:12px; padding:12px;">
+                        style="display:none; flex-direction:column; gap:12px; background:var(--bg-elevated); box-shadow:var(--shadow-elevation-2); border-radius:16px; padding:14px; border:none;">
                         <div
-                            style="position:relative; width:100%; max-height:320px; overflow:hidden; border-radius:8px; display:flex; justify-content:center; align-items:center; background:#08070d; border:1px solid rgba(255,255,255,0.05);">
+                            style="position:relative; width:100%; max-height:320px; overflow:hidden; border-radius:10px; display:flex; justify-content:center; align-items:center; background:var(--bg-sunken); box-shadow:var(--shadow-sunken); border:none;">
                             <img id="support-preview-img"
-                                style="max-width:100%; max-height:320px; object-fit:contain; border-radius:6px;"
+                                style="max-width:100%; max-height:320px; object-fit:contain; border-radius:8px;"
                                 alt="Bukti Foto Kendala IT">
 
                             <!-- Analysis In-Progress Overlay -->
                             <div id="support-analyzing-overlay"
-                                style="display:none; position:absolute; inset:0; background:rgba(9,8,14,0.85); backdrop-filter:blur(3px); flex-direction:column; justify-content:center; align-items:center; gap:10px;">
-                                <div class="spinner" style="width:28px; height:28px; border-width:3px;"></div>
+                                style="display:none; position:absolute; inset:0; background:rgba(9,8,14,0.88); backdrop-filter:blur(4px); flex-direction:column; justify-content:center; align-items:center; gap:10px;">
+                                <div class="spinner" style="width:32px; height:32px; border-width:3px;"></div>
                                 <span style="font-size:13px; font-weight:700; color:var(--crimson-light);">🤖
                                     Menganalisis foto kendala...</span>
                                 <span style="font-size:11px; color:var(--text-muted);">Mendeteksi trouble & menyusun
@@ -1182,16 +1342,21 @@
 
                         <!-- Footer Info -->
                         <div
-                            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-size:11px; border-top:1px dashed var(--border-subtle); padding-top:8px;">
-                            <div style="display:flex; align-items:center; gap:6px; color:var(--text-muted);">
+                            style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; background:rgba(255,255,255,0.02); border-radius:10px; padding:8px 12px; border:none;">
+                            <div style="display:flex; align-items:center; gap:8px; color:var(--text-muted);">
                                 <span>📄</span>
                                 <span id="support-img-name"
                                     style="font-family:'JetBrains Mono',monospace;">evidence.png</span>
                             </div>
-                            <span id="support-ai-badge" class="pill"
-                                style="color:#6ee7b7; border-color:rgba(110,231,183,0.3); font-size:10.5px;">
-                                ✨ Dianalisis oleh Lunar Vision
-                            </span>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <button type="button" class="btn-mini btn-mini-primary" style="font-size:10.5px; padding:3px 10px;" onclick="chooseAnotherSupportPhoto()">
+                                    📁 Ganti Foto Lain
+                                </button>
+                                <span id="support-ai-badge" class="pill"
+                                    style="background:rgba(16, 185, 129, 0.22); color:#6ee7b7; box-shadow:0 2px 8px rgba(16, 185, 129, 0.25); font-size:10.5px; border:none;">
+                                    ✨ Dianalisis oleh Lunar Vision
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1233,9 +1398,9 @@
     <div class="modal-overlay" id="modal-settings">
         <div class="modal-content">
             <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+                style="display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:none;">
                 <h3 style="font-size:16px; font-weight:700;">⚙️ Pengaturan Profil Pengguna & Si-Pangaduan</h3>
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
+                <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;"
                     onclick="closeSettingsModal()">✕</button>
             </div>
 
@@ -1267,6 +1432,15 @@
                 <input type="text" id="setting-url" class="input-text" value="http://192.168.0.152/it/">
             </div>
 
+            <div class="field-group">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label class="field-label" for="setting-gemini-key" style="margin-bottom:0;">Google Gemini API Key (Vision Analysis)</label>
+                    <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#fb7185; text-decoration:underline;">Dapatkan Kunci Gratis di Google AI Studio ↗</a>
+                </div>
+                <input type="password" id="setting-gemini-key" class="input-text" placeholder="AIzaSy... (Opsional, untuk analisis foto hardware & layar error akurat)">
+                <span style="display:block; font-size:11px; color:var(--text-sub); margin-top:4px;">Menggunakan Gemini 2.5 Flash Vision untuk mendeteksi kendala IT Support (printer macet, LAN putus, monitor blank, BSOD, SIMRS error) dari foto.</span>
+            </div>
+
             <div style="display:flex; justify-content:space-between; gap:12px; margin-top:8px;">
                 <button class="btn btn-secondary" style="font-size:12px;" onclick="syncOptionsFromPortal()">
                     🔄 Sinkronkan Unit dari Web
@@ -1282,9 +1456,9 @@
     <div class="modal-overlay" id="modal-add-template" style="display:none;">
         <div class="modal-content" style="max-width:540px;">
             <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+                style="display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:none;">
                 <h3 id="modal-tpl-heading" style="font-size:16px; font-weight:700;">➕ Simpan Sebagai Template Baru</h3>
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
+                <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;"
                     onclick="closeAddTemplateModal()">✕</button>
             </div>
 
@@ -1379,9 +1553,9 @@
     <div class="modal-overlay" id="modal-switch-project" style="display:none;">
         <div class="modal-content" style="max-width:540px;">
             <div
-                style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px;">
+                style="display:flex; justify-content:space-between; align-items:center; padding-bottom:14px; border-bottom:none;">
                 <h3 style="font-size:16px; font-weight:700;">📂 Pilih / Ganti Repositori Project</h3>
-                <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;"
+                <button class="btn btn-secondary" style="padding:6px 12px; font-size:12px;"
                     onclick="closeProjectModal()">✕</button>
             </div>
 
@@ -1461,6 +1635,13 @@
 
                 updateProjectDisplay();
                 generateDiffCard();
+                setTimestampAnchor(currentTimestampAnchor);
+                const toggleRandomEl = document.getElementById('toggle-random-delta');
+                if (toggleRandomEl) {
+                    toggleRandomEl.checked = isRandomDeltaActive;
+                    const btnReroll = document.getElementById('btn-reroll-delta');
+                    if (btnReroll) btnReroll.style.display = isRandomDeltaActive ? 'inline-block' : 'none';
+                }
                 updateTimestamps();
                 setupSupportImageEvents();
             } catch (err) {
@@ -2079,6 +2260,11 @@
         // 5. Settings Modal Handlers
         function openSettingsModal(isNew = false) {
             document.getElementById('modal-settings').style.display = 'flex';
+            const urlInput = document.getElementById('setting-url');
+            if (urlInput) urlInput.value = appSettings.portalUrl || 'http://192.168.0.152/it/';
+            const geminiInput = document.getElementById('setting-gemini-key');
+            if (geminiInput) geminiInput.value = appSettings.geminiApiKey || '';
+
             if (isNew) {
                 document.getElementById('modal-profile-select').value = '__new__';
                 loadProfileToModal('__new__');
@@ -2099,6 +2285,8 @@
             const inputUser = document.getElementById('setting-user').value.trim() || '01229';
             const inputPass = document.getElementById('setting-pass').value.trim() || '123456';
             const inputUrl = document.getElementById('setting-url').value.trim() || 'http://192.168.0.152/it/';
+            const geminiKeyEl = document.getElementById('setting-gemini-key');
+            const inputGeminiKey = geminiKeyEl ? geminiKeyEl.value.trim() : (appSettings.geminiApiKey || '');
 
             let profiles = appSettings.profiles || [];
             let existingIdx = profiles.findIndex(p => p.nama === inputNama || p.id === selUserVal);
@@ -2124,7 +2312,9 @@
             }
 
             const payload = {
+                ...appSettings,
                 portalUrl: inputUrl,
+                geminiApiKey: inputGeminiKey,
                 activeProfile: inputNama,
                 profiles: profiles
             };
@@ -2221,8 +2411,11 @@
             updateTimestamps();
         }
 
-        // 7. Timestamps Engine (Dual-Mode: Auto & Manual)
+        // 7. Timestamps Engine (Dual-Mode: Auto & Manual, Patokan Hari Ini, & Random 85-100% Delta)
         let currentTimeMode = 'auto'; // 'auto' | 'manual'
+        let currentTimestampAnchor = localStorage.getItem('lunar_timestamp_anchor') || 'selesai'; // 'selesai' | 'terima'
+        let isRandomDeltaActive = localStorage.getItem('lunar_random_delta') === 'true';
+        let currentRandomFactor = isRandomDeltaActive ? (0.85 + Math.random() * 0.15) : 1.0;
         let autoPenerimaanDate = new Date();
         let autoPenyelesaianDate = new Date();
 
@@ -2238,6 +2431,57 @@
         function dateToPortalDateTimeString(d) {
             if (!d || isNaN(d.getTime())) return '';
             return `${d.getFullYear()}-${padTwo(d.getMonth() + 1)}-${padTwo(d.getDate())}  ${padTwo(d.getHours())}:${padTwo(d.getMinutes())}`;
+        }
+
+        function getBaseDeltaMinutes(jenisVal) {
+            if (jenisVal === '4') {
+                return 23 * 60 + 59; // 1439 mins (23h 59m)
+            } else if (jenisVal === '5') {
+                return (3 * 24 + 23) * 60 + 59; // 5759 mins (3d 23h 59m)
+            } else if (['6', '7', '8'].includes(jenisVal)) {
+                return 45; // 45 mins
+            } else {
+                return 60; // 1h
+            }
+        }
+
+        function setTimestampAnchor(anchor) {
+            currentTimestampAnchor = anchor;
+            localStorage.setItem('lunar_timestamp_anchor', anchor);
+            const btnSelesai = document.getElementById('btn-anchor-selesai');
+            const btnTerima = document.getElementById('btn-anchor-terima');
+            if (btnSelesai) btnSelesai.className = anchor === 'selesai' ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+            if (btnTerima) btnTerima.className = anchor === 'terima' ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+            updateTimestamps();
+            if (currentTimeMode === 'manual') {
+                syncManualFromAuto();
+            }
+        }
+
+        function toggleRandomDelta(checked) {
+            isRandomDeltaActive = checked;
+            localStorage.setItem('lunar_random_delta', checked ? 'true' : 'false');
+            const btnReroll = document.getElementById('btn-reroll-delta');
+            if (btnReroll) btnReroll.style.display = checked ? 'inline-block' : 'none';
+
+            if (checked) {
+                rerollRandomDelta();
+            } else {
+                currentRandomFactor = 1.0;
+                updateTimestamps();
+                if (currentTimeMode === 'manual') {
+                    syncManualFromAuto();
+                }
+            }
+        }
+
+        function rerollRandomDelta() {
+            // Random floating factor between 0.85 and 1.00
+            currentRandomFactor = 0.85 + Math.random() * 0.15;
+            updateTimestamps();
+            if (currentTimeMode === 'manual') {
+                syncManualFromAuto();
+            }
         }
 
         function calculateDeltaString(startDate, endDate) {
@@ -2333,8 +2577,8 @@
                     badge.style.background = 'rgba(239, 68, 68, 0.2)';
                     badge.style.color = '#f87171';
                 } else {
-                    badge.style.background = 'rgba(139, 92, 246, 0.15)';
-                    badge.style.color = '#c4b5fd';
+                    badge.style.background = isRandomDeltaActive ? 'rgba(244, 63, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)';
+                    badge.style.color = isRandomDeltaActive ? '#fda4af' : '#c4b5fd';
                 }
             }
 
@@ -2354,32 +2598,44 @@
             const jenisVal = jenisSelect ? jenisSelect.value : '4';
             const now = new Date();
 
-            // Waktu Penerimaan is current day and time!
-            autoPenerimaanDate = new Date(now.getTime());
-            autoPenyelesaianDate = new Date(now.getTime());
+            const baseMinutes = getBaseDeltaMinutes(jenisVal);
+            let effectiveMinutes = baseMinutes;
 
-            let deltaLabel = '1h Delta';
+            if (isRandomDeltaActive) {
+                effectiveMinutes = Math.round(baseMinutes * currentRandomFactor);
+            }
 
-            if (jenisVal === '4') {
-                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + (23 * 60 + 59) * 60 * 1000);
-                deltaLabel = '23h 59m Delta';
-            } else if (jenisVal === '5') {
-                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + ((3 * 24 + 23) * 60 + 59) * 60 * 1000);
-                deltaLabel = '3d 23h 59m Delta';
-            } else if (['6', '7', '8'].includes(jenisVal)) {
-                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + 45 * 60 * 1000);
-                deltaLabel = '45m Delta';
+            const durationMs = effectiveMinutes * 60 * 1000;
+
+            if (currentTimestampAnchor === 'selesai') {
+                // Waktu Penyelesaian is TODAY (now)!
+                autoPenyelesaianDate = new Date(now.getTime());
+                autoPenerimaanDate = new Date(autoPenyelesaianDate.getTime() - durationMs);
             } else {
-                autoPenyelesaianDate.setTime(autoPenerimaanDate.getTime() + 60 * 60 * 1000);
-                deltaLabel = '1h Delta';
+                // Waktu Penerimaan is TODAY (now)!
+                autoPenerimaanDate = new Date(now.getTime());
+                autoPenyelesaianDate = new Date(autoPenerimaanDate.getTime() + durationMs);
+            }
+
+            const days = Math.floor(effectiveMinutes / (24 * 60));
+            const hours = Math.floor((effectiveMinutes % (24 * 60)) / 60);
+            const mins = effectiveMinutes % 60;
+            const parts = [];
+            if (days > 0) parts.push(`${days}d`);
+            if (hours > 0) parts.push(`${hours}h`);
+            parts.push(`${mins}m`);
+            let deltaLabel = parts.join(' ') + ' Delta';
+            if (isRandomDeltaActive) {
+                const percent = Math.round(currentRandomFactor * 100);
+                deltaLabel = `🎲 ${deltaLabel} (${percent}%)`;
             }
 
             if (currentTimeMode === 'auto') {
                 const badge = document.getElementById('badge-duration');
                 if (badge) {
                     badge.textContent = deltaLabel;
-                    badge.style.background = 'rgba(139, 92, 246, 0.15)';
-                    badge.style.color = '#c4b5fd';
+                    badge.style.background = isRandomDeltaActive ? 'rgba(244, 63, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)';
+                    badge.style.color = isRandomDeltaActive ? '#fda4af' : '#c4b5fd';
                 }
                 const textSel = document.getElementById('text-penyelesaian');
                 const textPen = document.getElementById('text-penerimaan');
@@ -2388,28 +2644,200 @@
             }
         }
 
-        // 8. Diff Card & Raw Diff Evidence
-        let activeEvidenceTab = 'card';
+        // 8. Diff Card, Raw Diff & Programmer Photo Evidence
+        let activeEvidenceTab = 'card'; // 'card' | 'raw' | 'photo'
+        let progPhotoPath = null;
+        let progPhotoName = null;
+        let progPhotoBase64 = null;
+        let diffCardPath = null;
 
         function switchEvidenceTab(tab) {
             activeEvidenceTab = tab;
             const tabCard = document.getElementById('tab-diff-card');
             const tabRaw = document.getElementById('tab-diff-raw');
+            const tabPhoto = document.getElementById('tab-prog-photo');
+
             const boxCard = document.getElementById('diff-card-container');
             const boxRaw = document.getElementById('diff-raw-container');
+            const boxPhoto = document.getElementById('prog-photo-container');
+
+            const btnRegen = document.getElementById('btn-regen-card');
+            const btnChooseAnotherProg = document.getElementById('btn-choose-another-prog');
+            const btnReanalyzeProg = document.getElementById('btn-reanalyze-prog');
+            const btnClearProg = document.getElementById('btn-clear-prog-photo');
+
+            if (tabCard) tabCard.className = tab === 'card' ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+            if (tabRaw) tabRaw.className = tab === 'raw' ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+            if (tabPhoto) tabPhoto.className = tab === 'photo' ? 'btn-mini btn-mini-primary' : 'btn-mini btn-mini-secondary';
+
+            if (boxCard) boxCard.style.display = tab === 'card' ? 'block' : 'none';
+            if (boxRaw) boxRaw.style.display = tab === 'raw' ? 'block' : 'none';
+            if (boxPhoto) boxPhoto.style.display = tab === 'photo' ? 'flex' : 'none';
 
             if (tab === 'card') {
-                tabCard.className = 'btn-mini btn-mini-primary';
-                tabRaw.className = 'btn-mini btn-mini-secondary';
-                boxCard.style.display = 'block';
-                boxRaw.style.display = 'none';
-            } else {
-                tabCard.className = 'btn-mini btn-mini-secondary';
-                tabRaw.className = 'btn-mini btn-mini-primary';
-                boxCard.style.display = 'none';
-                boxRaw.style.display = 'block';
+                if (btnRegen) btnRegen.style.display = 'inline-block';
+                if (btnChooseAnotherProg) btnChooseAnotherProg.style.display = 'none';
+                if (btnReanalyzeProg) btnReanalyzeProg.style.display = 'none';
+                if (btnClearProg) btnClearProg.style.display = 'none';
+                if (diffCardPath) evidenceImagePath = diffCardPath;
+            } else if (tab === 'raw') {
+                if (btnRegen) btnRegen.style.display = 'inline-block';
+                if (btnChooseAnotherProg) btnChooseAnotherProg.style.display = 'none';
+                if (btnReanalyzeProg) btnReanalyzeProg.style.display = 'none';
+                if (btnClearProg) btnClearProg.style.display = 'none';
                 fetchRawDiff();
+            } else if (tab === 'photo') {
+                if (btnRegen) btnRegen.style.display = 'none';
+                if (btnChooseAnotherProg) btnChooseAnotherProg.style.display = progPhotoPath ? 'inline-block' : 'none';
+                if (btnReanalyzeProg) btnReanalyzeProg.style.display = progPhotoPath ? 'inline-block' : 'none';
+                if (btnClearProg) btnClearProg.style.display = progPhotoPath ? 'inline-block' : 'none';
+                if (progPhotoPath) evidenceImagePath = progPhotoPath;
             }
+        }
+
+        function handleProgFileInput(file) {
+            if (!file) return;
+            handleProgImage(file);
+        }
+
+        function chooseAnotherProgPhoto() {
+            const input = document.getElementById('prog-file-upload');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        async function handleProgImage(file) {
+            if (!file) return;
+            if (!file.type || !file.type.startsWith('image/')) {
+                alert('Silakan pilih file gambar (PNG, JPG, JPEG, WEBP).');
+                return;
+            }
+            progPhotoName = file.name || 'programmer_screenshot.png';
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const dataUrl = e.target.result;
+                progPhotoBase64 = dataUrl;
+
+                const previewImg = document.getElementById('prog-preview-img');
+                const previewContainer = document.getElementById('prog-photo-preview');
+                const dropzone = document.getElementById('prog-upload-dropzone');
+                const nameLabel = document.getElementById('prog-img-name');
+                const btnChooseAnotherProg = document.getElementById('btn-choose-another-prog');
+                const btnReanalyzeProg = document.getElementById('btn-reanalyze-prog');
+                const btnClearProg = document.getElementById('btn-clear-prog-photo');
+
+                if (previewImg) previewImg.src = dataUrl;
+                if (previewContainer) previewContainer.style.display = 'flex';
+                if (dropzone) dropzone.style.display = 'none';
+                if (nameLabel) nameLabel.textContent = progPhotoName;
+                if (btnChooseAnotherProg) btnChooseAnotherProg.style.display = 'inline-block';
+                if (btnReanalyzeProg) btnReanalyzeProg.style.display = 'inline-block';
+                if (btnClearProg) btnClearProg.style.display = 'inline-block';
+
+                // Automatically analyze with AI and populate Isi Komplain / Ringkasan Pekerjaan
+                await analyzeProgImage(dataUrl, progPhotoName);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function analyzeProgImage(dataUrl, fileName) {
+            const overlay = document.getElementById('prog-analyzing-overlay');
+            const aiBadge = document.getElementById('prog-ai-badge');
+            const footerStatus = document.getElementById('footer-status');
+
+            if (overlay) overlay.style.display = 'flex';
+            if (aiBadge) {
+                aiBadge.style.display = 'inline-flex';
+                aiBadge.style.color = 'var(--crimson-light)';
+                aiBadge.textContent = '⏳ Menganalisis...';
+            }
+            if (footerStatus) footerStatus.textContent = '🔍 Menganalisis tangkapan layar programmer...';
+
+            try {
+                const res = await fetch('/api/analyze-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: dataUrl,
+                        fileName: fileName || 'programmer_evidence.png',
+                        unitValue: document.getElementById('select-unit').value,
+                        jenisAduanValue: document.getElementById('select-jenis').value,
+                        apiKey: appSettings.geminiApiKey || '',
+                        role: 'programmer'
+                    })
+                });
+                const data = await res.json();
+                if (overlay) overlay.style.display = 'none';
+
+                if (data.success && data.analysis) {
+                    document.getElementById('textarea-komplain').value = sanitizeLunaSignatureClient(data.analysis);
+                    progPhotoPath = data.imagePath;
+                    evidenceImagePath = data.imagePath;
+
+                    if (aiBadge) {
+                        aiBadge.style.display = 'inline-flex';
+                        aiBadge.style.color = '#6ee7b7';
+                        aiBadge.textContent = `✨ ${data.source || 'Lunar Vision'}`;
+                    }
+                    if (footerStatus) footerStatus.textContent = '✅ Tangkapan layar programmer berhasil dianalisis & dimasukkan ke Isi Komplain!';
+                } else {
+                    if (aiBadge) {
+                        aiBadge.style.display = 'inline-flex';
+                        aiBadge.style.color = '#fb7185';
+                        aiBadge.textContent = '⚠️ Gagal menganalisis';
+                    }
+                    if (footerStatus) footerStatus.textContent = '⚠️ Gagal menganalisis gambar: ' + (data.error || 'Unknown error');
+                }
+            } catch (err) {
+                if (overlay) overlay.style.display = 'none';
+                if (aiBadge) {
+                    aiBadge.style.display = 'inline-flex';
+                    aiBadge.style.color = '#fb7185';
+                    aiBadge.textContent = '⚠️ Error koneksi';
+                }
+                console.error('[!] Error analyzing programmer image:', err);
+            }
+        }
+
+        function triggerAnalyzeProgImage() {
+            if (progPhotoBase64) {
+                analyzeProgImage(progPhotoBase64, progPhotoName);
+            }
+        }
+
+        function clearProgPhoto() {
+            progPhotoPath = null;
+            progPhotoName = null;
+            progPhotoBase64 = null;
+            if (activeEvidenceTab === 'photo') {
+                evidenceImagePath = null;
+            }
+
+            const previewImg = document.getElementById('prog-preview-img');
+            const previewContainer = document.getElementById('prog-photo-preview');
+            const dropzone = document.getElementById('prog-upload-dropzone');
+            const btnChooseAnotherProg = document.getElementById('btn-choose-another-prog');
+            const btnReanalyzeProg = document.getElementById('btn-reanalyze-prog');
+            const btnClearProg = document.getElementById('btn-clear-prog-photo');
+            const aiBadge = document.getElementById('prog-ai-badge');
+            const overlay = document.getElementById('prog-analyzing-overlay');
+            const fileInput = document.getElementById('prog-file-upload');
+
+            if (previewImg) previewImg.src = '';
+            if (previewContainer) previewContainer.style.display = 'none';
+            if (dropzone) dropzone.style.display = 'block';
+            if (btnChooseAnotherProg) btnChooseAnotherProg.style.display = 'none';
+            if (btnReanalyzeProg) btnReanalyzeProg.style.display = 'none';
+            if (btnClearProg) btnClearProg.style.display = 'none';
+            if (aiBadge) {
+                aiBadge.style.display = 'none';
+                aiBadge.textContent = '';
+            }
+            if (overlay) overlay.style.display = 'none';
+            if (fileInput) fileInput.value = '';
         }
 
         async function fetchRawDiff() {
@@ -2445,7 +2873,7 @@
                 } else if (line.startsWith('@@')) {
                     return `<span style="color:#a78bfa; font-weight:bold; display:block; padding:2px 0;">${escaped}</span>`;
                 } else if (line.startsWith('diff --git')) {
-                    return `<span style="color:#38bdf8; font-weight:bold; display:block; margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:4px;">${escaped}</span>`;
+                    return `<span style="color:#38bdf8; font-weight:bold; display:block; margin-top:10px; background:rgba(56,189,248,0.12); padding:6px 10px; border-radius:6px; border:none;">${escaped}</span>`;
                 }
                 return `<span>${escaped}</span>`;
             }).join('\n');
@@ -2464,7 +2892,10 @@
                 });
                 const data = await res.json();
                 if (data.success) {
-                    evidenceImagePath = data.path;
+                    diffCardPath = data.path;
+                    if (activeEvidenceTab !== 'photo') {
+                        evidenceImagePath = data.path;
+                    }
                     const img = document.getElementById('diff-card-img');
                     img.src = '/api/diff-evidence-image?repoPath=' + encodeURIComponent(currentRepoPath) + '&t=' + Date.now();
                     img.style.display = 'block';
@@ -2481,22 +2912,97 @@
             }
         }
 
+        function sanitizeLunaSignatureClient(text) {
+            if (!text || typeof text !== 'string') return '';
+            let lines = text.split('\n');
+
+            // Strip preamble intro lines (e.g. "Berikut adalah...")
+            while (lines.length && /^(berikut|tentu|ini\s+adalah|di\s+bawah\s+ini|halo|baik|catatan|log\s+perbaikan|rincian\s+pekerjaan)/i.test(lines[0].trim())) {
+                lines.shift();
+            }
+            while (lines.length && !lines[0].trim()) {
+                lines.shift();
+            }
+
+            const filtered = [];
+            for (const line of lines) {
+                const l = line.toLowerCase().trim();
+                if (!l) {
+                    filtered.push(line);
+                    continue;
+                }
+                if (
+                    l.includes('lunar territory') ||
+                    l.includes('hands off') ||
+                    l.includes('crimson+') ||
+                    l.includes('(˶ᵔ ᵕ ᵔ˶)') ||
+                    l.includes('signature luna') ||
+                    l.includes('tanda tangan luna') ||
+                    l.includes('banner luna') ||
+                    l.includes('watermark luna') ||
+                    l.includes("luna's thought") ||
+                    l.includes('crafted with devotion by luna') ||
+                    l.includes('personal coding guardian') ||
+                    l.includes('under luna') ||
+                    l.includes('behalf of miharin') ||
+                    /(tanda\s+tangan|signature|watermark|banner|ascii\s*art)\s*(luna|pengembang|developer)/i.test(line) ||
+                    /(luna|territory)\s*(signature|watermark|banner)/i.test(line)
+                ) {
+                    continue;
+                }
+                filtered.push(line);
+            }
+
+            let cleaned = filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+            // Clean raw markdown bold **text** to clean text
+            cleaned = cleaned.replace(/\*\*(.*?)\*\*/g, '$1');
+            // Clean sub-bullets
+            cleaned = cleaned.replace(/^\s*[\*\-]\s+/gm, '• ');
+
+            // Fix truncated trailing line
+            let cLines = cleaned.split('\n').filter(l => l.trim().length > 0);
+            if (cLines.length > 0) {
+                let last = cLines[cLines.length - 1].trim();
+                if (!/[.!?:\)"]$/.test(last)) {
+                    const words = last.split(/\s+/);
+                    const lastWord = words[words.length - 1];
+                    if (lastWord.length <= 4 && !/^[A-Z0-9]+$/.test(lastWord)) {
+                        words.pop();
+                        last = words.join(' ');
+                    }
+                    if (last && !/[.!?:\)"]$/.test(last)) {
+                        last += '.';
+                    }
+                    cLines[cLines.length - 1] = last;
+                }
+            }
+
+            return cLines.join('\n').trim();
+        }
+
         async function generateAiNotes() {
             const textarea = document.getElementById('textarea-komplain');
-            textarea.value = 'Menganalisis git diff dengan model lokal...';
+            textarea.value = 'Menganalisis git diff dengan AI...';
 
             try {
                 const res = await fetch('/api/generate-notes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: 'gemma:2b', repoPath: currentRepoPath })
+                    body: JSON.stringify({
+                        model: 'gemma:2b',
+                        repoPath: currentRepoPath,
+                        apiKey: appSettings.geminiApiKey || ''
+                    })
                 });
                 const data = await res.json();
                 if (data.success && data.notes) {
-                    textarea.value = data.notes;
+                    textarea.value = sanitizeLunaSignatureClient(data.notes);
+                } else if (!data.success && data.error) {
+                    textarea.value = 'Gagal menghasilkan catatan: ' + data.error;
                 }
             } catch (err) {
                 console.error(err);
+                textarea.value = 'Gagal menghubungi server untuk generate catatan.';
             }
         }
 
@@ -2506,6 +3012,14 @@
         function handleSupportFileInput(file) {
             if (!file) return;
             handleSupportImage(file);
+        }
+
+        function chooseAnotherSupportPhoto() {
+            const fileInput = document.getElementById('file-upload');
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput.click();
+            }
         }
 
         // Backward compatibility
@@ -2531,6 +3045,7 @@
                 const previewImg = document.getElementById('support-preview-img');
                 const previewContainer = document.getElementById('support-preview-container');
                 const uploadContainer = document.getElementById('support-upload-container');
+                const btnChooseAnother = document.getElementById('btn-choose-another-support');
                 const btnReanalyze = document.getElementById('btn-reanalyze-support');
                 const btnClear = document.getElementById('btn-clear-support-img');
                 const badgeStatus = document.getElementById('badge-support-status');
@@ -2539,6 +3054,7 @@
                 if (previewImg) previewImg.src = dataUrl;
                 if (previewContainer) previewContainer.style.display = 'flex';
                 if (uploadContainer) uploadContainer.style.display = 'none';
+                if (btnChooseAnother) btnChooseAnother.style.display = 'inline-block';
                 if (btnReanalyze) btnReanalyze.style.display = 'inline-block';
                 if (btnClear) btnClear.style.display = 'inline-block';
                 if (badgeStatus) badgeStatus.style.display = 'inline-flex';
@@ -2570,14 +3086,15 @@
                         imageBase64: dataUrl,
                         fileName: fileName || 'evidence_support.png',
                         unitValue: document.getElementById('select-unit').value,
-                        jenisAduanValue: document.getElementById('select-jenis').value
+                        jenisAduanValue: document.getElementById('select-jenis').value,
+                        apiKey: appSettings.geminiApiKey || ''
                     })
                 });
                 const data = await res.json();
                 if (overlay) overlay.style.display = 'none';
 
                 if (data.success && data.analysis) {
-                    document.getElementById('textarea-komplain').value = data.analysis;
+                    document.getElementById('textarea-komplain').value = sanitizeLunaSignatureClient(data.analysis);
                     evidenceImagePath = data.imagePath;
 
                     if (aiBadge) {
@@ -2616,6 +3133,7 @@
             const previewImg = document.getElementById('support-preview-img');
             const previewContainer = document.getElementById('support-preview-container');
             const uploadContainer = document.getElementById('support-upload-container');
+            const btnChooseAnother = document.getElementById('btn-choose-another-support');
             const btnReanalyze = document.getElementById('btn-reanalyze-support');
             const btnClear = document.getElementById('btn-clear-support-img');
             const badgeStatus = document.getElementById('badge-support-status');
@@ -2624,6 +3142,7 @@
             if (previewImg) previewImg.src = '';
             if (previewContainer) previewContainer.style.display = 'none';
             if (uploadContainer) uploadContainer.style.display = 'block';
+            if (btnChooseAnother) btnChooseAnother.style.display = 'none';
             if (btnReanalyze) btnReanalyze.style.display = 'none';
             if (btnClear) btnClear.style.display = 'none';
             if (badgeStatus) badgeStatus.style.display = 'none';
@@ -2644,6 +3163,7 @@
                     const previewImg = document.getElementById('support-preview-img');
                     const previewContainer = document.getElementById('support-preview-container');
                     const uploadContainer = document.getElementById('support-upload-container');
+                    const btnChooseAnother = document.getElementById('btn-choose-another-support');
                     const btnReanalyze = document.getElementById('btn-reanalyze-support');
                     const btnClear = document.getElementById('btn-clear-support-img');
                     const badgeStatus = document.getElementById('badge-support-status');
@@ -2652,6 +3172,7 @@
                     if (previewImg) previewImg.src = data.imageBase64;
                     if (previewContainer) previewContainer.style.display = 'flex';
                     if (uploadContainer) uploadContainer.style.display = 'none';
+                    if (btnChooseAnother) btnChooseAnother.style.display = 'inline-block';
                     if (btnReanalyze) btnReanalyze.style.display = 'inline-block';
                     if (btnClear) btnClear.style.display = 'inline-block';
                     if (badgeStatus) badgeStatus.style.display = 'inline-flex';
@@ -2669,6 +3190,7 @@
         }
 
         function setupSupportImageEvents() {
+            // Setup IT Support Dropzone
             const dropzone = document.getElementById('support-upload-container');
             if (dropzone) {
                 ['dragenter', 'dragover'].forEach(eventName => {
@@ -2696,8 +3218,36 @@
                 }, false);
             }
 
+            // Setup Programmer Dropzone
+            const progDropzone = document.getElementById('prog-upload-dropzone');
+            if (progDropzone) {
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    progDropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        progDropzone.classList.add('drag-over');
+                    }, false);
+                });
+
+                ['dragleave', 'drop'].forEach(eventName => {
+                    progDropzone.addEventListener(eventName, (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        progDropzone.classList.remove('drag-over');
+                    }, false);
+                });
+
+                progDropzone.addEventListener('drop', (e) => {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    if (files && files.length > 0) {
+                        handleProgImage(files[0]);
+                    }
+                }, false);
+            }
+
+            // Global paste listener (both tracks)
             window.addEventListener('paste', (e) => {
-                if (currentTrack !== 'it_support') return;
                 const items = (e.clipboardData || e.originalEvent.clipboardData)?.items;
                 if (!items) return;
 
@@ -2705,7 +3255,12 @@
                     if (items[i].type && items[i].type.startsWith('image/')) {
                         e.preventDefault();
                         const blob = items[i].getAsFile();
-                        handleSupportImage(blob);
+                        if (currentTrack === 'it_support') {
+                            handleSupportImage(blob);
+                        } else if (currentTrack === 'programmer') {
+                            switchEvidenceTab('photo');
+                            handleProgImage(blob);
+                        }
                         return;
                     }
                 }
@@ -2743,6 +3298,22 @@
                 waktuPenyelesaian = dateToPortalDateTimeString(autoPenyelesaianDate);
             }
 
+            let screenshotPathToSend = evidenceImagePath;
+            if (currentTrack === 'programmer') {
+                if (activeEvidenceTab === 'photo') {
+                    if (!progPhotoPath) {
+                        modal.style.display = 'none';
+                        alert('Anda memilih tab Upload Foto Manual, namun belum memilih/mengunggah foto bukti. Silakan unggah foto terlebih dahulu atau beralih ke tab Diff Card.');
+                        return;
+                    }
+                    screenshotPathToSend = progPhotoPath;
+                } else {
+                    screenshotPathToSend = diffCardPath || evidenceImagePath;
+                }
+            } else {
+                screenshotPathToSend = evidenceImagePath;
+            }
+
             const payload = {
                 role: currentTrack,
                 namaPengadu: document.getElementById('input-nama').value,
@@ -2750,13 +3321,15 @@
                 jenisAduanValue: document.getElementById('select-jenis').value,
                 noRm: document.getElementById('input-norm').value,
                 isiKomplain: document.getElementById('textarea-komplain').value,
-                screenshotPath: evidenceImagePath,
+                screenshotPath: screenshotPathToSend,
                 clickSimpan: clickSimpan,
                 portalUsername: activeProf.portalUsername || '01229',
                 portalPassword: activeProf.portalPassword || '123456',
                 repoPath: currentRepoPath,
                 waktuPenerimaan,
-                waktuPenyelesaian
+                waktuPenyelesaian,
+                timestampAnchor: currentTimestampAnchor,
+                randomDelta: isRandomDeltaActive
             };
 
             try {
