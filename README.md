@@ -78,6 +78,7 @@ Buka `lunar_settings.json` dan sesuaikan nilainya untuk **Track Programmer**:
     {
       "id": "programmer",
       "nama": "Nama Programmer Anda",
+      "nama_pengadu": "Nama Pelapor / Pemohon",
       "portalUsername": "01229",
       "portalPassword": "password_portal_anda",
       "defaultUnit": "44",
@@ -87,6 +88,8 @@ Buka `lunar_settings.json` dan sesuaikan nilainya untuk **Track Programmer**:
   "activeRepoPath": "/path/ke/repo/project/anda",
   "recentProjects": [],
   "defaultNama": "Nama Programmer Anda",
+  "nama": "Nama Programmer Anda",
+  "nama_pengadu": "Nama Pelapor / Pemohon",
   "defaultUnit": "44",
   "defaultJenisAduan": "4",
   "autoSyncPortalOptions": true
@@ -94,6 +97,8 @@ Buka `lunar_settings.json` dan sesuaikan nilainya untuk **Track Programmer**:
 ```
 
 ### 💡 Penjelasan Pengaturan Khusus Programmer:
+- **`nama`**: Nama profil aktif programmer / petugas yang login (misal `"Alfin"`).
+- **`nama_pengadu`**: Nama pengadu / pelapor default yang diinput ke portal Si-Pangaduan (misal `"Sigit"` atau nama pemohon).
 - **`portalUsername` & `portalPassword`**: Kredensial NIK dan kata sandi akun portal Si-Pangaduan rumah sakit Anda.
 - **`defaultUnit`**: Disetel ke `"44"` (**Inst. Rekam Medik**), unit pemohon standar untuk pengembangan aplikasi RME.
 - **`defaultJenisAduan`**: Disetel ke `"4"` (**Perbaikan Aplikasi**), otomatis memicu rentang durasi pengerjaan target ~23 jam 59 menit (atau pilih `"5"` untuk **Pembuatan Modul SimRS** durasi 4 hari).

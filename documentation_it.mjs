@@ -78,10 +78,13 @@ function loadSettings() {
     portalUrl: "http://192.168.0.152/it/",
     portalUsername: "01229",
     portalPassword: "123456",
+    activeProfile: "Programmer",
     defaultNama: "Programmer",
+    nama: "Programmer",
     defaultUnit: "44",
     defaultJenisAduan: "4",
     petugasValue: "01229",
+    nama_pengadu: "Petugas IT",
     defaultNamaPengadu: "Petugas IT",
     autoSyncPortalOptions: true,
     aiMode: "gemini_fallback",
@@ -102,15 +105,18 @@ function getEffectiveSettings() {
     ) ||
     (settings.profiles && settings.profiles[0]);
   if (activeProf) {
+    settings.activeProfile = activeProf.nama || settings.activeProfile || "Alfin";
     settings.portalUsername =
       activeProf.portalUsername || settings.portalUsername || "01229";
     settings.portalPassword =
       activeProf.portalPassword || settings.portalPassword || "123456";
-    settings.defaultNama = activeProf.nama || settings.defaultNama || "Sigit";
+    settings.defaultNama = activeProf.nama || settings.defaultNama || "Alfin";
+    settings.nama = activeProf.nama || settings.nama || "Alfin";
     settings.petugasValue =
       activeProf.petugasValue || settings.petugasValue || activeProf.portalUsername || "01229";
-    settings.defaultNamaPengadu =
-      activeProf.defaultNamaPengadu || settings.defaultNamaPengadu || "Petugas IT";
+    settings.nama_pengadu =
+      activeProf.nama_pengadu || activeProf.defaultNamaPengadu || settings.nama_pengadu || settings.defaultNamaPengadu || "Sigit";
+    settings.defaultNamaPengadu = settings.nama_pengadu;
     settings.defaultUnit =
       activeProf.defaultUnit || settings.defaultUnit || "44";
     settings.defaultJenisAduan =
@@ -129,15 +135,22 @@ function saveSettings(settings) {
           p.nama === settings.activeProfile || p.id === settings.activeProfile,
       ) || settings.profiles[0];
     if (activeProf) {
+      settings.activeProfile = activeProf.nama || settings.activeProfile;
       settings.portalUsername =
         activeProf.portalUsername || settings.portalUsername;
       settings.portalPassword =
         activeProf.portalPassword || settings.portalPassword;
       settings.defaultNama = activeProf.nama || settings.defaultNama;
+      settings.nama = activeProf.nama || settings.nama;
       settings.petugasValue =
         activeProf.petugasValue || settings.petugasValue || activeProf.portalUsername;
+      settings.nama_pengadu =
+        activeProf.nama_pengadu || settings.nama_pengadu || activeProf.defaultNamaPengadu;
       settings.defaultNamaPengadu =
-        activeProf.defaultNamaPengadu || settings.defaultNamaPengadu;
+        activeProf.nama_pengadu || activeProf.defaultNamaPengadu || settings.defaultNamaPengadu;
+      settings.defaultUnit = activeProf.defaultUnit || settings.defaultUnit;
+      settings.defaultJenisAduan =
+        activeProf.defaultJenisAduan || settings.defaultJenisAduan;
     }
   }
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
@@ -2337,7 +2350,7 @@ export function startDocumentationServer({
         commitInfo = { hash, msg: msgParts.join(" - ") };
       } catch (_) {}
 
-      const settings = loadSettings();
+      const settings = getEffectiveSettings();
       const options = loadPortalOptions();
       const templates = loadItTemplates();
       const discoveredProjects = discoverSiblingProjects(currentRepoPath);
@@ -2379,7 +2392,7 @@ export function startDocumentationServer({
       }
 
       currentRepoPath = targetPath;
-      const settings = loadSettings();
+      const settings = getEffectiveSettings();
       settings.activeRepoPath = currentRepoPath;
       if (!settings.recentProjects) settings.recentProjects = [];
       if (!settings.recentProjects.includes(currentRepoPath)) {
@@ -3111,7 +3124,8 @@ async function runInteractiveCLI() {
     )) || "1";
   const role = roleAnswer.trim() === "2" ? "it_support" : "programmer";
 
-  const defaultNamaPengadu = settings.defaultNamaPengadu || "Petugas IT";
+  const defaultNamaPengadu =
+    settings.nama_pengadu || settings.defaultNamaPengadu || "Sigit";
   const namaPengadu =
     (await rl.question(`2. Nama Pengadu (Pelapor) [default: ${defaultNamaPengadu}]: `)) ||
     defaultNamaPengadu;
@@ -3230,11 +3244,16 @@ if (process.argv[1]?.endsWith("documentation_it.mjs")) {
           p.id === profileArg.toLowerCase(),
       );
       if (chosen) {
+        settings.activeProfile = chosen.nama || settings.activeProfile;
         settings.portalUsername =
           chosen.portalUsername || settings.portalUsername;
         settings.portalPassword =
           chosen.portalPassword || settings.portalPassword;
         settings.defaultNama = chosen.nama || settings.defaultNama;
+        settings.nama = chosen.nama || settings.nama;
+        settings.nama_pengadu =
+          chosen.nama_pengadu || chosen.defaultNamaPengadu || settings.nama_pengadu;
+        settings.defaultNamaPengadu = settings.nama_pengadu;
         settings.defaultUnit = chosen.defaultUnit || settings.defaultUnit;
         settings.defaultJenisAduan =
           chosen.defaultJenisAduan || settings.defaultJenisAduan;
@@ -3253,8 +3272,9 @@ if (process.argv[1]?.endsWith("documentation_it.mjs")) {
       process.cwd();
     const nama =
       process.argv.find((a) => a.startsWith("--nama="))?.split("=")[1] ||
-      settings.defaultNama ||
-      CURRENT_USER;
+      settings.nama_pengadu ||
+      settings.defaultNamaPengadu ||
+      "Sigit";
     const unit =
       process.argv.find((a) => a.startsWith("--unit="))?.split("=")[1] ||
       settings.defaultUnit ||

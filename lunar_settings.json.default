@@ -8,11 +8,13 @@
   "portalUsername": "01229",
   "portalPassword": "123456",
   "petugasValue": "01229",
+  "nama_pengadu": "Petugas IT",
   "defaultNamaPengadu": "Petugas IT",
   "profiles": [
     {
       "id": "programmer",
       "nama": "Programmer",
+      "nama_pengadu": "Petugas IT",
       "portalUsername": "01229",
       "portalPassword": "123456",
       "petugasValue": "01229",
@@ -24,6 +26,7 @@
   "activeRepoPath": "",
   "recentProjects": [],
   "defaultNama": "Programmer",
+  "nama": "Programmer",
   "defaultUnit": "44",
   "defaultJenisAduan": "4",
   "autoSyncPortalOptions": true

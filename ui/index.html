@@ -1624,26 +1624,31 @@
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div class="field-group">
-                    <label class="field-label" for="setting-nama">Nama Pengadu (Pelapor)</label>
+                    <label class="field-label" for="setting-nama">Nama Profil (Profil Aktif)</label>
                     <input type="text" id="setting-nama" class="input-text" placeholder="Alfin">
                 </div>
+                <div class="field-group">
+                    <label class="field-label" for="setting-nama-pengadu">Nama Pengadu (Pelapor Default)</label>
+                    <input type="text" id="setting-nama-pengadu" class="input-text" placeholder="Sigit">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div class="field-group">
                     <label class="field-label" for="setting-petugas">Yang Mengerjakan (Petugas IT)</label>
                     <select id="setting-petugas" class="input-select">
                         <!-- Populated dynamically via JS -->
                     </select>
                 </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                 <div class="field-group">
                     <label class="field-label" for="setting-user">Username Akun Si-Pangaduan</label>
                     <input type="text" id="setting-user" class="input-text" placeholder="01229">
                 </div>
-                <div class="field-group">
-                    <label class="field-label" for="setting-pass">Password Si-Pangaduan</label>
-                    <input type="password" id="setting-pass" class="input-text" placeholder="••••••">
-                </div>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label" for="setting-pass">Password Si-Pangaduan</label>
+                <input type="password" id="setting-pass" class="input-text" placeholder="••••••">
             </div>
 
             <div class="field-group">
@@ -2027,6 +2032,7 @@
             const list = appSettings.profiles || [];
             return list.find(p => p.nama === appSettings.activeProfile || p.id === appSettings.activeProfile) || list[0] || {
                 nama: 'Alfin',
+                nama_pengadu: 'Sigit',
                 portalUsername: '01229',
                 portalPassword: '123456',
                 petugasValue: '01229',
@@ -2063,6 +2069,8 @@
         function loadProfileToModal(val) {
             if (val === '__new__') {
                 document.getElementById('setting-nama').value = '';
+                const settingPengadu = document.getElementById('setting-nama-pengadu');
+                if (settingPengadu) settingPengadu.value = '';
                 document.getElementById('setting-user').value = '';
                 document.getElementById('setting-pass').value = '';
                 const settingPetugas = document.getElementById('setting-petugas');
@@ -2071,9 +2079,11 @@
                 }
                 return;
             }
-            const prof = (appSettings.profiles || []).find(p => p.nama === val);
+            const prof = (appSettings.profiles || []).find(p => p.nama === val || p.id === val);
             if (prof) {
                 document.getElementById('setting-nama').value = prof.nama || '';
+                const settingPengadu = document.getElementById('setting-nama-pengadu');
+                if (settingPengadu) settingPengadu.value = prof.nama_pengadu || prof.defaultNamaPengadu || '';
                 document.getElementById('setting-user').value = prof.portalUsername || '';
                 document.getElementById('setting-pass').value = prof.portalPassword || '';
                 const settingPetugas = document.getElementById('setting-petugas');
@@ -2088,7 +2098,7 @@
             // 1. Nama Pengadu (Pelapor)
             const inputPengadu = document.getElementById('input-nama');
             if (inputPengadu) {
-                inputPengadu.value = prof.nama || 'Alfin';
+                inputPengadu.value = prof.nama_pengadu || prof.defaultNamaPengadu || 'Sigit';
             }
 
             // 2. Yang Mengerjakan (Petugas IT)
@@ -2110,12 +2120,14 @@
             }
 
             // 4. Modal Settings Mirror
+            const settingNama = document.getElementById('setting-nama');
+            if (settingNama) settingNama.value = prof.nama || 'Alfin';
+            const settingNamaPengadu = document.getElementById('setting-nama-pengadu');
+            if (settingNamaPengadu) settingNamaPengadu.value = prof.nama_pengadu || prof.defaultNamaPengadu || 'Sigit';
             const settingUser = document.getElementById('setting-user');
             if (settingUser) settingUser.value = prof.portalUsername || '01229';
             const settingPass = document.getElementById('setting-pass');
             if (settingPass) settingPass.value = prof.portalPassword || '123456';
-            const settingNama = document.getElementById('setting-nama');
-            if (settingNama) settingNama.value = prof.nama || 'Alfin';
             const settingPetugas = document.getElementById('setting-petugas');
             if (settingPetugas) settingPetugas.value = targetPetugas;
         }
@@ -2747,6 +2759,7 @@
         async function saveSettings(showAlert = true) {
             const selUserVal = document.getElementById('modal-profile-select')?.value;
             const inputNama = document.getElementById('setting-nama')?.value.trim() || appSettings.activeProfile || 'Alfin';
+            const inputNamaPengadu = document.getElementById('setting-nama-pengadu')?.value.trim() || document.getElementById('input-nama')?.value.trim() || 'Sigit';
             const inputUser = document.getElementById('setting-user')?.value.trim() || appSettings.portalUsername || '01229';
             const inputPass = document.getElementById('setting-pass')?.value.trim() || appSettings.portalPassword || '123456';
             const inputPetugas = document.getElementById('setting-petugas')?.value || document.getElementById('select-petugas')?.value || inputUser;
@@ -2762,12 +2775,14 @@
             const inputOllamaUrl = ollamaUrlEl ? ollamaUrlEl.value.trim() : (appSettings.ollamaUrl || 'http://127.0.0.1:11434');
 
             let profiles = appSettings.profiles || [];
-            let existingIdx = profiles.findIndex(p => p.nama === inputNama || p.id === selUserVal);
+            let existingIdx = profiles.findIndex(p => p.nama === inputNama || p.id === selUserVal || p.nama === selUserVal);
 
             if (existingIdx >= 0) {
                 profiles[existingIdx] = {
                     ...profiles[existingIdx],
                     nama: inputNama,
+                    nama_pengadu: inputNamaPengadu,
+                    defaultNamaPengadu: inputNamaPengadu,
                     portalUsername: inputUser,
                     portalPassword: inputPass,
                     petugasValue: inputPetugas,
@@ -2778,6 +2793,8 @@
                 profiles.push({
                     id: inputNama.toLowerCase().replace(/\s+/g, '_'),
                     nama: inputNama,
+                    nama_pengadu: inputNamaPengadu,
+                    defaultNamaPengadu: inputNamaPengadu,
                     portalUsername: inputUser,
                     portalPassword: inputPass,
                     petugasValue: inputPetugas,
@@ -2795,6 +2812,9 @@
                 ollamaUrl: inputOllamaUrl,
                 activeProfile: inputNama,
                 defaultNama: inputNama,
+                nama: inputNama,
+                nama_pengadu: inputNamaPengadu,
+                defaultNamaPengadu: inputNamaPengadu,
                 petugasValue: inputPetugas,
                 profiles: profiles
             };
