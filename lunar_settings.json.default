@@ -1,0 +1,23 @@
+{
+  "portalUrl": "http://192.168.0.152/it/",
+  "geminiApiKey": "",
+  "activeProfile": "Programmer",
+  "portalUsername": "01229",
+  "portalPassword": "123456",
+  "profiles": [
+    {
+      "id": "programmer",
+      "nama": "Programmer",
+      "portalUsername": "01229",
+      "portalPassword": "123456",
+      "defaultUnit": "44",
+      "defaultJenisAduan": "4"
+    }
+  ],
+  "activeRepoPath": "",
+  "recentProjects": [],
+  "defaultNama": "Programmer",
+  "defaultUnit": "44",
+  "defaultJenisAduan": "4",
+  "autoSyncPortalOptions": true
+}

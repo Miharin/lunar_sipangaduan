@@ -43,6 +43,57 @@ Sistem otomatisasi dan dashboard visual modern untuk mencatat dokumentasi pemeli
 
 ---
 
+## ⚙️ Konfigurasi Awal (Setup lunar_settings.json)
+
+Sebelum menjalankan aplikasi untuk pertama kali, salin file template konfigurasi default:
+
+- **Linux / macOS:**
+  ```bash
+  cp lunar_settings.json.default lunar_settings.json
+  ```
+- **Windows (Command Prompt / PowerShell):**
+  ```cmd
+  copy lunar_settings.json.default lunar_settings.json
+  ```
+
+Buka `lunar_settings.json` dan sesuaikan nilainya untuk **Track Programmer**:
+
+```json
+{
+  "portalUrl": "http://192.168.0.152/it/",
+  "geminiApiKey": "AIzaSy...",
+  "activeProfile": "Programmer",
+  "portalUsername": "01229",
+  "portalPassword": "password_portal_anda",
+  "profiles": [
+    {
+      "id": "programmer",
+      "nama": "Nama Programmer Anda",
+      "portalUsername": "01229",
+      "portalPassword": "password_portal_anda",
+      "defaultUnit": "44",
+      "defaultJenisAduan": "4"
+    }
+  ],
+  "activeRepoPath": "/path/ke/repo/project/anda",
+  "recentProjects": [],
+  "defaultNama": "Nama Programmer Anda",
+  "defaultUnit": "44",
+  "defaultJenisAduan": "4",
+  "autoSyncPortalOptions": true
+}
+```
+
+### 💡 Penjelasan Pengaturan Khusus Programmer:
+- **`portalUsername` & `portalPassword`**: Kredensial NIK dan kata sandi akun portal Si-Pangaduan rumah sakit Anda.
+- **`defaultUnit`**: Disetel ke `"44"` (**Inst. Rekam Medik**), unit pemohon standar untuk pengembangan aplikasi RME.
+- **`defaultJenisAduan`**: Disetel ke `"4"` (**Perbaikan Aplikasi**), otomatis memicu rentang durasi pengerjaan target ~23 jam 59 menit (atau pilih `"5"` untuk **Pembuatan Modul SimRS** durasi 4 hari).
+- **`activeRepoPath`**: Direktori repositori git yang sedang aktif dikerjakan (otomatis membaca commit, branch, dan diff).
+- **`geminiApiKey`**: Google Gemini API Key untuk analisis multimodal screenshot & ringkasan rilis otomatis (opsional).
+- 🛡️ **Keamanan:** File `lunar_settings.json` telah dikecualikan (`.gitignore`), sehingga aman dari kebocoran akun dan API key saat push ke GitHub.
+
+---
+
 ## 🚀 Panduan Menjalankan
 
 ### Cara Cepat (1-Click Launcher):
@@ -68,7 +119,7 @@ npm run cli
 # atau: node documentation_it.mjs --cli
 
 # Eksekusi langsung tanpa UI (Headless / Direct Flag)
-node documentation_it.mjs --programmer --ai --nama=Sigit
+node documentation_it.mjs --programmer --ai --nama="Nama Programmer"
 node documentation_it.mjs --it-support
 ```
 
@@ -78,16 +129,17 @@ node documentation_it.mjs --it-support
 
 ```text
 lunar_sipangaduan/
-├── documentation_it.mjs    # Core engine, web server, and automation script
-├── package.json            # NPM metadata and runner scripts
-├── start_ui.sh             # 1-click runner for Linux / macOS
-├── start_ui.bat            # 1-click runner for Windows
-├── lunar_settings.json     # Multi-user profiles & recent projects storage
-├── portal_options.json     # Harvested live hospital units & categories
-├── it_templates.json       # Pre-configured & custom complaint templates
-├── .gitignore              # Git ignore rules
+├── documentation_it.mjs        # Core engine, web server, and automation script
+├── package.json                # NPM metadata and runner scripts
+├── start_ui.sh                 # 1-click runner for Linux / macOS
+├── start_ui.bat                # 1-click runner for Windows
+├── lunar_settings.json.default # Template default pengaturan khusus Programmer (git-tracked)
+├── lunar_settings.json         # Konfigurasi lokal aktif & kredensial pengguna (git-ignored)
+├── portal_options.json         # Harvested live hospital units & categories
+├── it_templates.json           # Pre-configured & custom complaint templates
+├── .gitignore                  # Git ignore rules (mengecualikan lunar_settings.json)
 └── ui/
-    └── index.html          # Sleek, dark-mode, responsive web dashboard
+    └── index.html              # Sleek, dark-mode, responsive web dashboard
 ```
 
 ---

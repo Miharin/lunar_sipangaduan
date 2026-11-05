@@ -68,11 +68,17 @@ function loadSettings() {
       return JSON.parse(fs.readFileSync(settingsPath, "utf8"));
     } catch (_) {}
   }
+  const defaultPath = path.resolve(__dirname, "lunar_settings.json.default");
+  if (fs.existsSync(defaultPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(defaultPath, "utf8"));
+    } catch (_) {}
+  }
   return {
     portalUrl: "http://192.168.0.152/it/",
     portalUsername: "01229",
     portalPassword: "123456",
-    defaultNama: "Sigit",
+    defaultNama: "Programmer",
     defaultUnit: "44",
     defaultJenisAduan: "4",
     autoSyncPortalOptions: true,

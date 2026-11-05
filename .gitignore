@@ -7,3 +7,4 @@ node_modules/
 evidence/
 .DS_Store
 *.log
+lunar_settings.json
