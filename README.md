@@ -97,15 +97,21 @@ Buka `lunar_settings.json` dan sesuaikan nilainya untuk **Track Programmer**:
 ## 🚀 Panduan Menjalankan
 
 ### Cara Cepat (1-Click Launcher):
-- **Linux:**
+- **Linux / macOS:**
   ```bash
   ./start_ui.sh
   ```
-- **Windows:**
+- **Windows (Command Prompt / Double Click):**
   Cukup klik dua kali (*double-click*) file:
   ```text
   start_ui.bat
   ```
+- **Windows (PowerShell):**
+  ```powershell
+  .\start_ui.ps1
+  ```
+
+> ⚡ **Live-Reload & Watch Mode Aktif:** Seluruh runner di atas menjalankan mode *watch* dan *live-reload*. Setiap perubahan pada UI (`ui/index.html`), template (`it_templates.json`), atau skrip backend (`documentation_it.mjs`) akan secara instan menyegarkan (*auto-refresh*) halaman antarmuka di peramban tanpa perlu restart manual atau menekan F5!
 
 Dashboard web akan otomatis terbuka di browser pada alamat:
 👉 **`http://localhost:3721`**
@@ -129,17 +135,18 @@ node documentation_it.mjs --it-support
 
 ```text
 lunar_sipangaduan/
-├── documentation_it.mjs        # Core engine, web server, and automation script
-├── package.json                # NPM metadata and runner scripts
-├── start_ui.sh                 # 1-click runner for Linux / macOS
-├── start_ui.bat                # 1-click runner for Windows
+├── documentation_it.mjs        # Core engine, web server, Live-Reload SSE, and automation script
+├── package.json                # NPM metadata and runner scripts (node --watch)
+├── start_ui.sh                 # 1-click runner with live-reload for Linux / macOS
+├── start_ui.bat                # 1-click runner with live-reload for Windows (CMD)
+├── start_ui.ps1                # 1-click runner with live-reload for Windows (PowerShell)
 ├── lunar_settings.json.default # Template default pengaturan khusus Programmer (git-tracked)
 ├── lunar_settings.json         # Konfigurasi lokal aktif & kredensial pengguna (git-ignored)
 ├── portal_options.json         # Harvested live hospital units & categories
 ├── it_templates.json           # Pre-configured & custom complaint templates
 ├── .gitignore                  # Git ignore rules (mengecualikan lunar_settings.json)
 └── ui/
-    └── index.html              # Sleek, dark-mode, responsive web dashboard
+    └── index.html              # Sleek, dark-mode, responsive web dashboard (Live-Reload Sentinel)
 ```
 
 ---

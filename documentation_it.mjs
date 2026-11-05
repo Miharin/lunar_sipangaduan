@@ -1719,6 +1719,57 @@ export function startDocumentationServer({
     currentRepoPath = initialSettings.activeRepoPath;
   }
 
+  // 🌙 Lunar Live-Reload SSE Stream & File Watchers
+  const lunarLiveReloadClients = new Set();
+  let lunarReloadDebounceTimer = null;
+
+  const lunarBroadcastReload = () => {
+    clearTimeout(lunarReloadDebounceTimer);
+    lunarReloadDebounceTimer = setTimeout(() => {
+      console.log(
+        "[*] [Lunar Live-Reload] Terdeteksi perubahan berkas. Menyiarkan sinyal refresh ke UI..."
+      );
+      for (const lunarClient of lunarLiveReloadClients) {
+        try {
+          lunarClient.write("event: reload\ndata: reload\n\n");
+        } catch (_) {
+          lunarLiveReloadClients.delete(lunarClient);
+        }
+      }
+    }, 150);
+  };
+
+  const lunarWatchTargets = [
+    path.resolve(__dirname, "ui"),
+    path.resolve(__dirname, "it_templates.json"),
+    path.resolve(__dirname, "portal_options.json"),
+    path.resolve(__dirname, "lunar_settings.json"),
+  ];
+
+  const lunarFileWatchers = [];
+  for (const lunarTarget of lunarWatchTargets) {
+    if (fs.existsSync(lunarTarget)) {
+      try {
+        const lunarWatcher = fs.watch(
+          lunarTarget,
+          { recursive: true },
+          (lunarEventType, lunarFilename) => {
+            if (
+              lunarFilename &&
+              (lunarFilename.endsWith("~") ||
+                lunarFilename.endsWith(".tmp") ||
+                lunarFilename.startsWith("."))
+            ) {
+              return;
+            }
+            lunarBroadcastReload();
+          }
+        );
+        lunarFileWatchers.push(lunarWatcher);
+      } catch (_) {}
+    }
+  }
+
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
@@ -1741,6 +1792,23 @@ export function startDocumentationServer({
           }
         });
       });
+
+    // 0. Live-Reload SSE Stream Endpoint
+    if (req.method === "GET" && url.pathname === "/api/live-reload") {
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+      });
+      res.write("retry: 1000\n\n");
+      res.write("data: connected\n\n");
+
+      lunarLiveReloadClients.add(res);
+      req.on("close", () => {
+        lunarLiveReloadClients.delete(res);
+      });
+      return;
+    }
 
     // 1. Serve Web UI
     if (req.method === "GET" && url.pathname === "/") {
@@ -2226,6 +2294,20 @@ Rincian Pekerjaan:
     return "127.0.0.1";
   }
 
+  server.on("close", () => {
+    for (const lunarWatcher of lunarFileWatchers) {
+      try {
+        lunarWatcher.close();
+      } catch (_) {}
+    }
+    for (const lunarClient of lunarLiveReloadClients) {
+      try {
+        lunarClient.end();
+      } catch (_) {}
+    }
+    lunarLiveReloadClients.clear();
+  });
+
   server.on("error", (err) => {
     if (err.code === "EADDRINUSE") {
       console.log(
@@ -2242,6 +2324,20 @@ Rincian Pekerjaan:
     }
   });
 
+  const lunarSessionFile = path.join(
+    os.tmpdir(),
+    "lunar_sipangaduan_ui_session.json"
+  );
+
+  process.on("SIGINT", () => {
+    try {
+      if (fs.existsSync(lunarSessionFile)) {
+        fs.unlinkSync(lunarSessionFile);
+      }
+    } catch (_) {}
+    process.exit(0);
+  });
+
   server.listen(port, "0.0.0.0", () => {
     const localIp = getLocalNetworkIp();
     console.log("\n======================================================");
@@ -2253,11 +2349,40 @@ Rincian Pekerjaan:
       `[*] [Lunar] Buka link LAN di atas dari PC lain di jaringan RS untuk akses langsung.`,
     );
 
-    const isWindows = process.platform === "win32";
-    const openCmd = isWindows
-      ? `start http://localhost:${port}`
-      : `xdg-open http://localhost:${port}`;
-    exec(openCmd, () => {});
+    let lunarIsWatchRestart = false;
+    try {
+      if (fs.existsSync(lunarSessionFile)) {
+        const lunarSessionData = JSON.parse(
+          fs.readFileSync(lunarSessionFile, "utf-8")
+        );
+        if (lunarSessionData && lunarSessionData.ppid === process.ppid) {
+          lunarIsWatchRestart = true;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      fs.writeFileSync(
+        lunarSessionFile,
+        JSON.stringify({ ppid: process.ppid, startedAt: Date.now() }),
+        "utf-8"
+      );
+    } catch (_) {}
+
+    const lunarShouldOpen =
+      !process.argv.includes("--no-open") && !lunarIsWatchRestart;
+
+    if (lunarShouldOpen) {
+      const isWindows = process.platform === "win32";
+      const openCmd = isWindows
+        ? `start http://localhost:${port}`
+        : `xdg-open http://localhost:${port}`;
+      exec(openCmd, () => {});
+    } else if (lunarIsWatchRestart) {
+      console.log(
+        `[*] [Lunar] Watch restart terdeteksi. Sesi browser dipertahankan (Live-Reload menyegarkan tampilan).`
+      );
+    }
   });
 
   return server;

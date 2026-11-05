@@ -3353,6 +3353,61 @@
         }
 
         fetchInitialData();
+
+        // ---------------------------------------------------------
+        // 🌙 Lunar Live-Reload Sentinel
+        // ---------------------------------------------------------
+        (function lunarInitLiveReload() {
+            let lunarEventSource = null;
+            let lunarIsReconnecting = false;
+
+            function lunarConnect() {
+                try {
+                    lunarEventSource = new EventSource('/api/live-reload');
+
+                    lunarEventSource.addEventListener('reload', () => {
+                        console.log('🌙 [Lunar Live-Reload] File change detected, reloading UI...');
+                        location.reload();
+                    });
+
+                    lunarEventSource.onopen = () => {
+                        if (lunarIsReconnecting) {
+                            console.log('🌙 [Lunar Live-Reload] Connection restored, refreshing UI...');
+                            location.reload();
+                        }
+                    };
+
+                    lunarEventSource.onerror = () => {
+                        if (lunarEventSource) {
+                            lunarEventSource.close();
+                            lunarEventSource = null;
+                        }
+                        lunarIsReconnecting = true;
+                        // Server might be restarting (e.g. node --watch); poll until active
+                        setTimeout(lunarPollServerAndReload, 1000);
+                    };
+                } catch (_) {
+                    setTimeout(lunarConnect, 2000);
+                }
+            }
+
+            function lunarPollServerAndReload() {
+                fetch('/api/init')
+                    .then(res => {
+                        if (res.ok) {
+                            console.log('🌙 [Lunar Live-Reload] Server active, reloading UI...');
+                            location.reload();
+                        } else {
+                            setTimeout(lunarPollServerAndReload, 800);
+                        }
+                    })
+                    .catch(() => {
+                        setTimeout(lunarPollServerAndReload, 800);
+                    });
+            }
+
+            lunarConnect();
+        })();
     </script>
 </body>
 
