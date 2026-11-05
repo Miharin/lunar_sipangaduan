@@ -81,12 +81,20 @@ function loadSettings() {
     defaultNama: "Programmer",
     defaultUnit: "44",
     defaultJenisAduan: "4",
+    petugasValue: "01229",
+    defaultNamaPengadu: "Petugas IT",
     autoSyncPortalOptions: true,
+    aiMode: "gemini_fallback",
+    localModel: "qwen2.5-coder:7b",
+    ollamaUrl: "http://127.0.0.1:11434",
   };
 }
 
 function getEffectiveSettings() {
   const settings = loadSettings();
+  settings.aiMode = settings.aiMode || "gemini_fallback";
+  settings.localModel = settings.localModel || "qwen2.5-coder:7b";
+  settings.ollamaUrl = settings.ollamaUrl || "http://127.0.0.1:11434";
   const activeProf =
     (settings.profiles || []).find(
       (p) =>
@@ -99,6 +107,10 @@ function getEffectiveSettings() {
     settings.portalPassword =
       activeProf.portalPassword || settings.portalPassword || "123456";
     settings.defaultNama = activeProf.nama || settings.defaultNama || "Sigit";
+    settings.petugasValue =
+      activeProf.petugasValue || settings.petugasValue || activeProf.portalUsername || "01229";
+    settings.defaultNamaPengadu =
+      activeProf.defaultNamaPengadu || settings.defaultNamaPengadu || "Petugas IT";
     settings.defaultUnit =
       activeProf.defaultUnit || settings.defaultUnit || "44";
     settings.defaultJenisAduan =
@@ -122,6 +134,10 @@ function saveSettings(settings) {
       settings.portalPassword =
         activeProf.portalPassword || settings.portalPassword;
       settings.defaultNama = activeProf.nama || settings.defaultNama;
+      settings.petugasValue =
+        activeProf.petugasValue || settings.petugasValue || activeProf.portalUsername;
+      settings.defaultNamaPengadu =
+        activeProf.defaultNamaPengadu || settings.defaultNamaPengadu;
     }
   }
   fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
@@ -214,13 +230,14 @@ async function extractPortalOptions(portalUrl, username, password) {
       return {
         unitOptions: getOptions("#id_bagian_api"),
         jenisAduanOptions: getOptions("#jenis_aduan"),
+        petugasOptions: getOptions("#profesix"),
       };
     });
 
     const optPath = path.resolve(__dirname, "portal_options.json");
     fs.writeFileSync(optPath, JSON.stringify(data, null, 2), "utf8");
     console.log(
-      `[+] [Lunar] Saved ${data.unitOptions.length} units and ${data.jenisAduanOptions.length} aduan types to ${optPath}`,
+      `[+] [Lunar] Saved ${data.unitOptions.length} units, ${data.jenisAduanOptions.length} aduan types, and ${data.petugasOptions?.length || 0} petugas options to ${optPath}`,
     );
     await browser.close();
     return data;
@@ -231,12 +248,28 @@ async function extractPortalOptions(portalUrl, username, password) {
 }
 
 // ---------------------------------------------------------
-// 1. Cross-Platform Browser Configuration
+// 1. Cross-Platform Browser Configuration & Remote Review Session
 // ---------------------------------------------------------
-function getBrowserConfig() {
+let lunarActiveReviewSession = null;
+
+export async function lunarCloseReviewSession() {
+  if (lunarActiveReviewSession) {
+    try {
+      if (lunarActiveReviewSession.timeoutId) {
+        clearTimeout(lunarActiveReviewSession.timeoutId);
+      }
+      if (lunarActiveReviewSession.browser) {
+        await lunarActiveReviewSession.browser.close();
+      }
+    } catch (_) {}
+    lunarActiveReviewSession = null;
+  }
+}
+
+function getBrowserConfig(options = {}) {
   const isWindows = process.platform === "win32";
   const config = {
-    headless: false,
+    headless: options.headless !== undefined ? options.headless : false,
     args: ["--start-maximized"],
   };
 
@@ -268,6 +301,22 @@ function getBrowserConfig() {
   }
 
   return config;
+}
+
+async function lunarLaunchBrowser(options = {}) {
+  try {
+    const config = getBrowserConfig(options);
+    return await chromium.launch(config);
+  } catch (err) {
+    if (!options.headless) {
+      console.log(
+        `[!] [Lunar] Headed browser launch failed (${err.message}). Retrying in headless mode for remote execution...`,
+      );
+      const fallbackConfig = getBrowserConfig({ ...options, headless: true });
+      return await chromium.launch(fallbackConfig);
+    }
+    throw err;
+  }
 }
 
 function escapeHtml(str) {
@@ -556,6 +605,165 @@ export function getEffectiveGitDiff(targetRepo) {
   return gitDiff;
 }
 
+export function lunar_getTodayDateString(date = new Date()) {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function lunar_getDocumentationEvidencePath(repoPath, date = new Date()) {
+  const todayStr = lunar_getTodayDateString(date);
+  const docDir = path.resolve(repoPath, "documentation");
+  if (!fs.existsSync(docDir)) {
+    fs.mkdirSync(docDir, { recursive: true });
+  }
+  return path.resolve(docDir, `changes-${todayStr}.png`);
+}
+
+export function lunar_getRecentCommits(targetRepo, limit = 25) {
+  try {
+    const raw = execSync(
+      `git log -n ${limit} --pretty=format:"%h|%H|%s|%an|%ci|%cr"`,
+      { cwd: targetRepo }
+    )
+      .toString()
+      .trim();
+    if (!raw) return [];
+    const todayStr = lunar_getTodayDateString();
+    return raw
+      .split("\n")
+      .map((line) => {
+        const [hash, fullHash, msg, author, ciDate, relativeDate] =
+          line.split("|");
+        const isToday = ciDate ? ciDate.startsWith(todayStr) : false;
+        return {
+          hash: hash || "",
+          fullHash: fullHash || "",
+          msg: msg || "",
+          author: author || "",
+          date: ciDate || "",
+          relativeDate: relativeDate || "",
+          isToday,
+        };
+      })
+      .filter((c) => c.hash);
+  } catch (err) {
+    return [];
+  }
+}
+
+export function lunar_getMergedCommitInfo(targetRepo, commitHashes = []) {
+  if (!commitHashes || !commitHashes.length) {
+    return getLatestCommitInfo(targetRepo);
+  }
+
+  const allCommits = lunar_getRecentCommits(targetRepo, 50);
+  const matched = commitHashes
+    .map((ch) =>
+      allCommits.find((c) => c.hash.startsWith(ch) || ch.startsWith(c.hash))
+    )
+    .filter(Boolean);
+
+  if (!matched.length) {
+    return getLatestCommitInfo(targetRepo);
+  }
+
+  if (matched.length === 1) {
+    return {
+      commitHash: matched[0].hash,
+      commitMsg: matched[0].msg,
+      isMerged: false,
+      count: 1,
+      commits: matched,
+    };
+  }
+
+  const shortHashes = matched.map((c) => c.hash);
+  const newest = shortHashes[0];
+  const oldest = shortHashes[shortHashes.length - 1];
+  const hashLabel = `${matched.length} COMMITS (${oldest}..${newest})`;
+  const msgLabel = matched.map((c) => `${c.hash}: ${c.msg}`).join(" • ");
+
+  return {
+    commitHash: hashLabel,
+    commitMsg: msgLabel,
+    isMerged: true,
+    count: matched.length,
+    commits: matched,
+  };
+}
+
+export function lunar_getDiffForCommits(targetRepo, commitHashes = []) {
+  if (!commitHashes || !commitHashes.length) {
+    return getEffectiveGitDiff(targetRepo);
+  }
+
+  if (commitHashes.length === 1) {
+    const h = commitHashes[0];
+    try {
+      const d = execSync(`git show --format="" ${h}`, {
+        cwd: targetRepo,
+      })
+        .toString()
+        .trim();
+      if (d) return d;
+    } catch (_) {}
+    try {
+      const d = execSync(`git diff ${h}^ ${h}`, { cwd: targetRepo })
+        .toString()
+        .trim();
+      if (d) return d;
+    } catch (_) {}
+    return getEffectiveGitDiff(targetRepo);
+  }
+
+  // Multi-commit diff:
+  try {
+    const allLogHashes = execSync('git log -n 50 --pretty=format:"%h"', {
+      cwd: targetRepo,
+    })
+      .toString()
+      .trim()
+      .split("\n");
+    const ordered = allLogHashes.filter((h) =>
+      commitHashes.some((c) => c.startsWith(h) || h.startsWith(c))
+    );
+    if (ordered.length >= 2) {
+      const newest = ordered[0];
+      const oldest = ordered[ordered.length - 1];
+      const idxOldest = allLogHashes.indexOf(oldest);
+      const idxNewest = allLogHashes.indexOf(newest);
+      const span = allLogHashes.slice(idxNewest, idxOldest + 1);
+      if (span.length === ordered.length) {
+        try {
+          const diff = execSync(`git diff ${oldest}^ ${newest}`, {
+            cwd: targetRepo,
+          })
+            .toString()
+            .trim();
+          if (diff) return diff;
+        } catch (_) {}
+      }
+    }
+  } catch (_) {}
+
+  // Fallback: concatenate diffs
+  let combined = "";
+  for (const c of commitHashes) {
+    try {
+      const d = execSync(`git show --format="" ${c}`, {
+        cwd: targetRepo,
+      })
+        .toString()
+        .trim();
+      if (d) combined += (combined ? "\n" : "") + d;
+    } catch (_) {}
+  }
+  return combined || getEffectiveGitDiff(targetRepo);
+}
+
 export function getLatestCommitInfo(targetRepo) {
   let commitHash = "Latest";
   let commitMsg = "Latest Changes";
@@ -658,7 +866,7 @@ export function parseDiffForCard(rawDiff, maxFiles = 4, maxLinesPerFile = 8) {
 async function generateReleaseNotesWithGemini(
   diffText,
   apiKey,
-  { repoName = "", commitMsg = "", changedFiles = [] } = {},
+  { repoName = "", commitMsg = "", changedFiles = [], commits = [], isMerged = false } = {},
 ) {
   if (!apiKey || !diffText) return null;
   const cleanChanges =
@@ -670,19 +878,23 @@ async function generateReleaseNotesWithGemini(
     "gemini-flash-latest",
     "gemini-2.5-flash-lite",
   ];
+  const commitSection = isMerged && commits.length > 1
+    ? `- Daftar Commit Digabungkan (${commits.length} commit):\n${commits.map((c) => `  * [${c.hash}] ${c.msg}`).join("\n")}\n`
+    : (commitMsg ? `- Commit Terakhir: ${commitMsg}\n` : "");
+
   const prompt = `Anda adalah Software Engineer Senior dan Analis Sistem SIMRS Rumah Sakit.
 Tuliskan rincian log pekerjaan pemeliharaan/perbaikan aplikasi yang LENGKAP, SPESIFIK, dan PROFESIONAL dalam Bahasa Indonesia untuk laporan pekerjaan IT Si-Pangaduan.
 
 DATA PERUBAHAN:
 - Repositori: ${repoName || "SIMRS"}
-${commitMsg ? `- Commit Terakhir: ${commitMsg}\n` : ""}${changedFiles.length ? `- File yang Diubah: ${changedFiles.slice(0, 8).join(", ")}\n` : ""}
+${commitSection}${changedFiles.length ? `- File yang Diubah: ${changedFiles.slice(0, 8).join(", ")}\n` : ""}
 - Cuplikan Perubahan Kode:
 ${cleanChanges}
 
 PETUNJUK PENULISAN:
 1. DILARANG menggunakan kalimat pembuka basa-basi (JANGAN tulis "Berikut adalah...", "Tentu,", "Berikut log perbaikan...", dll). Langsung tuliskan judul modul dan rincian pekerjaan.
 2. DILARANG menggunakan format markdown raw dengan asterisks (**judul**) atau sub-bullet bersarang (* teks). Gunakan format poin (• ) yang rapi.
-3. Tuliskan 2-4 poin yang SPESIFIK dan JELAS:
+3. ${isMerged ? `Pengguna menggabungkan ${commits.length} commit ke dalam satu dokumentasi terpadu. Rangkum seluruh poin penting dari seluruh commit dan diff tersebut secara menyeluruh ke dalam 3-5 poin (• ).` : "Tuliskan 2-4 poin yang SPESIFIK dan JELAS:"}
    - Sebutkan modul/fitur yang diperbaiki secara spesifik.
    - Jelaskan penyesuaian teknis yang dilakukan (misal: fungsionalitas tombol cetak, validasi input, perbaikan layout, dll).
    - Jelaskan dampak fungsionalnya untuk kelancaran pelayanan operasional rumah sakit.
@@ -729,8 +941,8 @@ Rincian Pekerjaan:`;
 
 async function generateReleaseNotesWithOllama(
   diffText,
-  model = "gemma:2b",
-  { repoName = "", commitMsg = "", changedFiles = [] } = {},
+  model = "qwen2.5-coder:7b",
+  { repoName = "", commitMsg = "", changedFiles = [], commits = [], isMerged = false, ollamaUrl = "http://127.0.0.1:11434" } = {},
 ) {
   console.log(`[*] [Lunar] Parsing git diff for meaningful changes...`);
   const cleanChanges =
@@ -738,30 +950,23 @@ async function generateReleaseNotesWithOllama(
 
   if (!cleanChanges) return null;
 
-  const candidateModels = [
-    model,
-    "luna",
-    "qwen2.5-coder:7b",
-    "qwen2.5:7b",
-    "gemma2:9b",
-    "gemma2:2b",
-    "gemma4:e4b",
-    "gemma:2b",
-  ].filter((m, i, arr) => m && arr.indexOf(m) === i);
+  const commitSection = isMerged && commits.length > 1
+    ? `- Daftar Commit Digabungkan (${commits.length} commit):\n${commits.map((c) => `  * [${c.hash}] ${c.msg}`).join("\n")}\n`
+    : (commitMsg ? `- Commit Terakhir: ${commitMsg}\n` : "");
 
   const prompt = `Anda adalah Software Engineer Senior dan Analis Sistem SIMRS Rumah Sakit.
 Tuliskan rincian log pekerjaan pemeliharaan/perbaikan aplikasi yang LENGKAP, SPESIFIK, dan PROFESIONAL dalam Bahasa Indonesia untuk laporan pekerjaan IT Si-Pangaduan.
 
 DATA PERUBAHAN:
 - Repositori: ${repoName || "SIMRS"}
-${commitMsg ? `- Commit Terakhir: ${commitMsg}\n` : ""}${changedFiles.length ? `- File yang Diubah: ${changedFiles.slice(0, 8).join(", ")}\n` : ""}
+${commitSection}${changedFiles.length ? `- File yang Diubah: ${changedFiles.slice(0, 8).join(", ")}\n` : ""}
 - Cuplikan Perubahan Kode:
 ${cleanChanges}
 
 PETUNJUK PENULISAN:
 1. DILARANG menggunakan kalimat pembuka basa-basi (JANGAN tulis "Berikut adalah...", "Tentu,", "Berikut log perbaikan...", dll). Langsung tuliskan judul modul dan rincian pekerjaan.
 2. DILARANG menggunakan format markdown raw dengan asterisks (**judul**) atau sub-bullet bersarang (* teks). Gunakan format poin (• ) yang rapi.
-3. Tuliskan 2-4 poin yang SPESIFIK dan JELAS:
+3. ${isMerged ? `Pengguna menggabungkan ${commits.length} commit ke dalam satu dokumentasi terpadu. Rangkum seluruh poin penting dari seluruh commit dan diff tersebut secara menyeluruh ke dalam 3-5 poin (• ).` : "Tuliskan 2-4 poin yang SPESIFIK dan JELAS:"}
    - Sebutkan modul/fitur yang diperbaiki secara spesifik berdasarkan nama file dan commit.
    - Jelaskan penyesuaian fungsionalitas yang dilakukan (misal: tombol cetak, validasi form, perbaikan tata letak form/judul, dll).
    - Jelaskan dampak fungsionalnya untuk kelancaran pelayanan rumah sakit.
@@ -770,54 +975,64 @@ PETUNJUK PENULISAN:
 
 Rincian Pekerjaan:`;
 
-  for (const m of candidateModels) {
-    console.log(
-      `[*] [Lunar] Querying local Ollama model (${m}) for release notes...`,
-    );
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
-      const response = await fetch("http://127.0.0.1:11434/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: m,
-          prompt: prompt,
-          stream: false,
-          options: {
-            temperature: 0.3,
-            num_predict: 1500,
-            num_ctx: 4096,
-            top_p: 0.9,
-            stop: ["\n\n\n\n", "User:", "Human:"],
-          },
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
+  const selectedModel = model || "qwen2.5-coder:7b";
+  const baseUrl = (ollamaUrl || "http://127.0.0.1:11434").replace(/\/+$/, "");
 
-      if (response.ok) {
-        const data = await response.json();
-        let rawNote = data.response?.trim();
-        if (rawNote && rawNote.length > 20) {
-          console.log(
-            `[+] [Lunar] Successfully generated release notes with ${m}!`,
-          );
-          rawNote = sanitizeLunaSignatureFromNotes(rawNote);
-          rawNote = cleanAndFixTruncatedNotes(
-            rawNote,
-            repoName,
-            commitMsg,
-            changedFiles,
-          );
-          return rawNote;
-        }
+  console.log(
+    `[*] [Lunar] Querying chosen local Ollama model (${selectedModel}) at ${baseUrl}...`,
+  );
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const response = await fetch(`${baseUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: selectedModel,
+        prompt: prompt,
+        stream: false,
+        options: {
+          temperature: 0.3,
+          num_predict: 1500,
+          num_ctx: 4096,
+          top_p: 0.9,
+          stop: ["\n\n\n\n", "User:", "Human:"],
+        },
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = await response.json();
+      let rawNote = data.response?.trim();
+      if (rawNote && rawNote.length > 20) {
+        console.log(
+          `[+] [Lunar] Successfully generated release notes with local model ${selectedModel}!`,
+        );
+        rawNote = sanitizeLunaSignatureFromNotes(rawNote);
+        rawNote = cleanAndFixTruncatedNotes(
+          rawNote,
+          repoName,
+          commitMsg,
+          changedFiles,
+        );
+        return rawNote;
       }
-    } catch (_) {}
+    } else {
+      const errText = await response.text();
+      console.log(
+        `[!] [Lunar] Local model (${selectedModel}) returned HTTP ${response.status}: ${errText}`,
+      );
+    }
+  } catch (err) {
+    console.log(
+      `[!] [Lunar] Local model (${selectedModel}) request failed: ${err.message}`,
+    );
   }
 
   console.log(
-    `[!] [Lunar] Ollama local models unreachable or timed out. Using deterministic fallback.`,
+    `[!] [Lunar] Local AI (${selectedModel}) unavailable or did not yield notes.`,
   );
   return null;
 }
@@ -872,6 +1087,9 @@ export async function analyzeSupportEvidenceImage({
   jenisAduanValue = "1",
   apiKey = null,
   role = "it_support",
+  aiMode = null,
+  localModel = null,
+  ollamaUrl = null,
 } = {}) {
   let targetPath = imagePath;
   let rawBase64 = null;
@@ -909,9 +1127,12 @@ export async function analyzeSupportEvidenceImage({
   const settings = getEffectiveSettings();
   const finalApiKey =
     apiKey || settings.geminiApiKey || process.env.GEMINI_API_KEY;
+  const effectiveAiMode = aiMode || settings.aiMode || "gemini_fallback";
+  const effectiveLocalModel = localModel || settings.localModel || "qwen2.5-coder:7b";
+  const effectiveOllamaUrl = (ollamaUrl || settings.ollamaUrl || "http://127.0.0.1:11434").replace(/\/+$/, "");
 
-  // 1. Priority #1: Official Google Gemini 2.5 Flash / Flash Latest Vision API
-  if (finalApiKey && rawBase64) {
+  // 1. Priority #1: Official Google Gemini 2.5 Flash / Flash Latest Vision API (if not local_only)
+  if (effectiveAiMode !== "local_only" && finalApiKey && rawBase64) {
     const candidateGeminiModels = [
       "gemini-2.5-flash",
       "gemini-flash-latest",
@@ -1006,9 +1227,9 @@ Format output: Berikan teks hasil analisis langsung yang siap pakai, rapi, dan p
     }
   }
 
-  // 2. Priority #2: Local Ollama Multimodal Vision (model: 'luna', 'gemma4:e4b', or 'llava')
-  if (!analysisText && rawBase64) {
-    console.log(`[*] [Lunar] Attempting Ollama vision analysis (${role})...`);
+  // 2. Priority #2: Local Ollama Multimodal Vision (if not gemini_only)
+  if (!analysisText && effectiveAiMode !== "gemini_only" && rawBase64) {
+    console.log(`[*] [Lunar] Attempting Ollama vision analysis (${role}) via ${effectiveOllamaUrl}...`);
     let prompt;
     if (role === "programmer") {
       prompt = `Anda adalah asisten software developer / programmer rumah sakit. Analisis tangkapan layar aplikasi/modul SIMRS ini. Tuliskan ringkasan 2-3 kalimat untuk kolom 'Isi Komplain' laporan pekerjaan:
@@ -1024,12 +1245,19 @@ ATURAN WAJIB: Dilarang keras menyebutkan watermark, komentar ASCII art, teks 'Lu
 Format jawaban langsung teks siap pakai tanpa pengantar/penutup.`;
     }
 
-    const candidateModels = ["luna", "gemma4:e4b", "llava"];
+    const candidateModels = [
+      effectiveLocalModel,
+      "luna",
+      "gemma4:e4b",
+      "llava",
+      "qwen2.5-vl",
+    ].filter((m, i, arr) => m && arr.indexOf(m) === i);
+
     for (const model of candidateModels) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
-        const res = await fetch("http://127.0.0.1:11434/api/generate", {
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch(`${effectiveOllamaUrl}/api/generate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1156,20 +1384,27 @@ Format jawaban langsung teks siap pakai tanpa pengantar/penutup.`;
 export async function generateGitDiffCard({
   repoPath = process.cwd(),
   outPath = null,
+  commits = [],
+  today = null,
 } = {}) {
+  const effectiveToday = today || lunar_getTodayDateString();
   const finalOutPath =
-    outPath || path.resolve(repoPath, "git_diff_evidence.png");
+    outPath || lunar_getDocumentationEvidencePath(repoPath, effectiveToday ? new Date(effectiveToday) : new Date());
   console.log(
     `[*] [Lunar] Generating blazing-fast Git Diff Evidence Card for "${repoPath}" (~300ms)...`,
   );
   let branchName = "dev";
   const repoName = path.basename(repoPath);
 
-  const commitInfo = getLatestCommitInfo(repoPath);
+  const commitInfo = lunar_getMergedCommitInfo(repoPath, commits);
   const hash = commitInfo.commitHash;
   const commitMsg = commitInfo.commitMsg;
-  const gitLog = `${hash} - ${commitMsg}`;
-  const gitDiff = getEffectiveGitDiff(repoPath);
+  const isMerged = commitInfo.isMerged;
+  const commitCount = commitInfo.count;
+  const commitList = commitInfo.commits || [];
+  const gitDiff = commits && commits.length
+    ? lunar_getDiffForCommits(repoPath, commits)
+    : getEffectiveGitDiff(repoPath);
 
   try {
     branchName = execSync("git rev-parse --abbrev-ref HEAD", { cwd: repoPath })
@@ -1177,7 +1412,7 @@ export async function generateGitDiffCard({
       .trim();
   } catch (_) {}
 
-  const parsedFiles = parseDiffForCard(gitDiff);
+  const parsedFiles = parseDiffForCard(gitDiff, isMerged ? 6 : 4, isMerged ? 10 : 8);
 
   let filesHtml = "";
   for (const f of parsedFiles) {
@@ -1245,17 +1480,28 @@ export async function generateGitDiffCard({
         <div class="card">
             <div class="header">
                 <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
-                <div class="title">EVIDENCE OF WORK • GIT COMMIT VERIFICATION</div>
-                <div class="badge">${escapeHtml(hash)}</div>
+                <div class="title">EVIDENCE OF WORK • ${isMerged ? `MERGED GIT COMMITS (${commitCount})` : "GIT COMMIT VERIFICATION"}</div>
+                <div class="badge" ${isMerged ? 'style="background: #8b5cf6; box-shadow: 0 2px 8px rgba(139,92,246,0.4);"' : ""}>${escapeHtml(hash)}</div>
             </div>
             <div class="meta-bar">
                 <div class="meta-item">Repository: <b>${escapeHtml(repoName)}</b></div>
                 <div class="meta-item">Branch: <b>${escapeHtml(branchName)}</b></div>
-                <div class="meta-item">Commit: <b>${escapeHtml(commitMsg)}</b></div>
+                <div class="meta-item">Commit: <b>${escapeHtml(isMerged ? `${commitCount} Commits Digabungkan` : commitMsg)}</b></div>
             </div>
+            ${isMerged && commitList.length ? `
+            <div style="background: #100c1c; padding: 10px 22px; font-size: 11px; color: #cbd5e1; border-top: 1px solid rgba(139,92,246,0.2); display: flex; flex-direction: column; gap: 4px;">
+                <div style="color: #c4b5fd; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Daftar Commit yang Digabungkan:</div>
+                ${commitList.map((c) => `
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span style="background:rgba(139,92,246,0.3); color:#ddd6fe; padding:2px 6px; border-radius:4px; font-family:monospace; font-weight:700;">${escapeHtml(c.hash)}</span>
+                        <span style="color:#e2e8f0;">${escapeHtml(c.msg)}</span>
+                    </div>
+                `).join("")}
+            </div>
+            ` : ""}
             ${filesHtml}
             <div class="footer">
-                <span>Verified by Lunar Sentinel (Si-Pangaduan Bridge)</span>
+                <span>Verified by Lunar Sentinel (Si-Pangaduan Bridge) • documentation/changes-${escapeHtml(effectiveToday)}.png</span>
                 <span>${new Date().toLocaleString("id-ID")}</span>
             </div>
         </div>
@@ -1284,6 +1530,10 @@ export async function generateGitDiffCard({
     const fallbackPath = path.resolve(__dirname, "git_diff_evidence.png");
     if (path.resolve(finalOutPath) !== fallbackPath) {
       fs.copyFileSync(finalOutPath, fallbackPath);
+    }
+    const repoFallback = path.resolve(repoPath, "git_diff_evidence.png");
+    if (path.resolve(finalOutPath) !== repoFallback) {
+      fs.copyFileSync(finalOutPath, repoFallback);
     }
   } catch (_) {}
   await browser.close();
@@ -1365,6 +1615,7 @@ async function captureRemedisEvidence(
 export async function runDocumentationIT({
   role = "programmer",
   namaPengadu = CURRENT_USER,
+  petugasValue = null,
   unitValue = "44", // Default: Inst. Rekam Medik
   jenisAduanValue = "4", // Default: Perbaikan Aplikasi
   noRm = "-",
@@ -1372,7 +1623,8 @@ export async function runDocumentationIT({
   screenshotPath = null,
   clickSimpan = false,
   useOllama = false,
-  ollamaModel = "gemma:2b",
+  ollamaModel = null,
+  aiMode = null,
   portalUrl = null,
   portalUsername = null,
   portalPassword = null,
@@ -1381,6 +1633,7 @@ export async function runDocumentationIT({
   waktuPenyelesaian = null,
   timestampAnchor = "selesai",
   randomDelta = false,
+  isWeb = false,
 } = {}) {
   console.log("\n======================================================");
   console.log("         🌙 LUNAR IT DOCUMENTATION AUTOMATION");
@@ -1391,6 +1644,8 @@ export async function runDocumentationIT({
     portalUrl || settings.portalUrl || "http://192.168.0.152/it/";
   const finalUsername = portalUsername || settings.portalUsername || "01229";
   const finalPassword = portalPassword || settings.portalPassword || "123456";
+  const effectiveAiMode = aiMode || settings.aiMode || "gemini_fallback";
+  const effectiveLocalModel = ollamaModel || settings.localModel || "qwen2.5-coder:7b";
 
   let rawIsiKomplain = isiKomplain;
   let finalScreenshot = screenshotPath;
@@ -1414,11 +1669,31 @@ export async function runDocumentationIT({
     gitDiff = getEffectiveGitDiff(repoPath);
 
     if (!rawIsiKomplain) {
-      if (useOllama && gitDiff) {
-        const aiNotes = await generateReleaseNotesWithOllama(
-          gitDiff,
-          ollamaModel,
-        );
+      if ((useOllama || effectiveAiMode) && gitDiff) {
+        let aiNotes = null;
+        if (effectiveAiMode === "local_only" || (useOllama && !settings.geminiApiKey)) {
+          aiNotes = await generateReleaseNotesWithOllama(
+            gitDiff,
+            effectiveLocalModel,
+            { repoName: path.basename(repoPath), commitMsg: gitLog, ollamaUrl: settings.ollamaUrl }
+          );
+        } else {
+          // Gemini with fallback to Local AI
+          if (settings.geminiApiKey) {
+            aiNotes = await generateReleaseNotesWithGemini(
+              gitDiff,
+              settings.geminiApiKey,
+              { repoName: path.basename(repoPath), commitMsg: gitLog }
+            );
+          }
+          if (!aiNotes && effectiveAiMode !== "gemini_only") {
+            aiNotes = await generateReleaseNotesWithOllama(
+              gitDiff,
+              effectiveLocalModel,
+              { repoName: path.basename(repoPath), commitMsg: gitLog, ollamaUrl: settings.ollamaUrl }
+            );
+          }
+        }
         if (aiNotes) {
           rawIsiKomplain = `Perbaikan Aplikasi (Commit: ${gitLog})\n\n${aiNotes}`;
         }
@@ -1454,9 +1729,11 @@ Rincian Perubahan:
 
   // --- BROWSER AUTOMATION ---
   console.log("[*] [Lunar] Launching live desktop browser...");
-  const browserConfig = getBrowserConfig();
-  const browser = await chromium.launch(browserConfig);
-  const context = await browser.newContext({ viewport: null });
+  const browser = await lunarLaunchBrowser();
+  const context = await browser.newContext({
+    viewport: { width: 1600, height: 1000 },
+    deviceScaleFactor: 1.25,
+  });
   const page = await context.newPage();
 
   // 1. Authenticate to Si-Pangaduan
@@ -1482,8 +1759,31 @@ Rincian Perubahan:
   await page.waitForTimeout(2000);
 
   // 3. Populate Fields
-  console.log(`[*] [Lunar] Setting Nama Pengadu: "${namaPengadu}"...`);
+  console.log(`[*] [Lunar] Setting Nama Pengadu (Pelapor): "${namaPengadu}"...`);
   await page.fill("#vb7a", namaPengadu);
+
+  const effectivePetugas =
+    petugasValue || settings.petugasValue || finalUsername || "01229";
+  console.log(
+    `[*] [Lunar] Selecting Yang Mengerjakan / Petugas IT (value: "${effectivePetugas}")...`,
+  );
+  await page.evaluate((val) => {
+    const select = document.getElementById("profesix");
+    if (select) {
+      let targetVal = String(val);
+      const opts = Array.from(select.options);
+      const matchByVal = opts.find((o) => o.value === targetVal);
+      if (!matchByVal) {
+        const matchByText = opts.find((o) =>
+          o.text.toLowerCase().includes(targetVal.toLowerCase()),
+        );
+        if (matchByText) targetVal = matchByText.value;
+      }
+      select.value = targetVal;
+      if (window.$) $(select).val(targetVal).trigger("change");
+      else select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+  }, effectivePetugas);
 
   console.log(`[*] [Lunar] Selecting Dari Unit (value: ${unitValue})...`);
   await page.evaluate((val) => {
@@ -1639,38 +1939,229 @@ Rincian Perubahan:
       );
     }
 
-    // Wait for network/AJAX response
+    // Wait for AJAX response or success modal (auto-closing in Si-Pangaduan)
     try {
-      await page.waitForLoadState("networkidle", { timeout: 10000 });
+      await Promise.race([
+        page.waitForResponse(
+          (res) => res.url().includes("simpan") && res.status() === 200,
+          { timeout: 8000 }
+        ),
+        page.waitForSelector(
+          ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
+          { timeout: 8000 }
+        ),
+      ]);
     } catch (_) {}
 
-    // Wait for secondary success SweetAlert if present (e.g. "Data Berhasil Disimpan" -> click "OK")
-    try {
-      const successBtn = await page.waitForSelector(
-        ".swal2-popup.swal2-show button.swal2-confirm",
-        { timeout: 4000, state: "visible" },
-      );
-      if (successBtn) {
-        console.log("[*] [Lunar] Dismissing post-save success modal...");
-        await successBtn.click();
-      }
-    } catch (_) {}
+    if (!page.isClosed()) {
+      try {
+        await page.waitForTimeout(1200);
+      } catch (_) {}
+    }
 
-    await page.waitForTimeout(2500);
     console.log(
       "[+] [Lunar] Form successfully submitted and confirmed with SweetAlert2!",
     );
-    await browser.close();
+    try {
+      await browser.close();
+    } catch (_) {}
+    return {
+      success: true,
+      submitted: true,
+      message: "Formulir Berhasil Disimpan ke Si-Pangaduan!",
+    };
   } else {
     console.log(
-      '\n[!] [Lunar] REVIEW MODE: Form is fully populated. "Simpan" was NOT clicked.',
+      '\n[!] [Lunar] REVIEW MODE: Form is fully populated. Capturing live screenshot for remote review...',
     );
+    let reviewScreenshotBase64 = "";
+    try {
+      // Ensure clean desktop layout: eradicate sidebar & overlays, unbind AdminLTE resize bounce listeners, and expand content-wrapper
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+
+        // 1. Unbind AdminLTE & window resize/scroll listeners so it cannot snap the sidebar back
+        if (window.$) {
+          try {
+            $(window).off("resize");
+            $(window).off("scroll");
+            $(document).off("scroll");
+            $('[data-widget="pushmenu"]').off("click");
+          } catch (_) {}
+        }
+
+        // 2. Physically remove all aside and sidebar elements from the DOM tree
+        const elementsToRemove = document.querySelectorAll(
+          'aside, .main-sidebar, .sidebar, #sidebar-overlay, .sidebar-overlay, .control-sidebar, [class*="main-sidebar"], [class*="brand-link"]'
+        );
+        elementsToRemove.forEach((el) => {
+          if (el && el.parentNode && el.tagName !== "BODY" && el.tagName !== "HTML") {
+            el.remove();
+          }
+        });
+
+        // 3. Inject permanent override CSS to ensure zero margin collapse
+        const style = document.createElement("style");
+        style.id = "lunar-clean-review-style";
+        style.innerHTML = `
+          * { transition: none !important; animation: none !important; }
+          aside, .main-sidebar, .sidebar, #sidebar-overlay, .sidebar-overlay {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+          }
+          .content-wrapper, .main-footer, .main-header {
+            margin-left: 0 !important;
+            padding-left: 24px !important;
+            padding-right: 24px !important;
+            width: 100% !important;
+          }
+        `;
+        document.head.appendChild(style);
+
+        const wrapper = document.querySelector(".content-wrapper");
+        if (wrapper) {
+          wrapper.style.setProperty("margin-left", "0px", "important");
+          wrapper.style.setProperty("padding-left", "24px", "important");
+          wrapper.style.setProperty("padding-right", "24px", "important");
+          wrapper.style.setProperty("width", "100%", "important");
+        }
+      });
+      await page.waitForTimeout(300);
+
+      // 4. Capture .content-wrapper element directly to avoid fixed-element bounce
+      const contentEl = await page.$(".content-wrapper");
+      let screenshotBuffer;
+      if (contentEl) {
+        screenshotBuffer = await contentEl.screenshot();
+      } else {
+        screenshotBuffer = await page.screenshot({ fullPage: true });
+      }
+      reviewScreenshotBase64 = `data:image/png;base64,${screenshotBuffer.toString("base64")}`;
+    } catch (shotErr) {
+      console.log("[!] [Lunar] Failed to capture full-page screenshot:", shotErr.message);
+    }
+
+    await lunarCloseReviewSession();
+
+    lunarActiveReviewSession = {
+      browser,
+      context,
+      page,
+      createdAt: Date.now(),
+      meta: {
+        namaPengadu,
+        petugasValue: effectivePetugas,
+        unitValue,
+        jenisAduanValue,
+        noRm,
+        waktuPenerimaan: finalWaktuPenerimaan,
+        waktuPenyelesaian: finalWaktuPenyelesaian,
+      },
+      timeoutId: setTimeout(() => {
+        console.log("[*] [Lunar] Review session timed out (15m). Closing browser...");
+        lunarCloseReviewSession();
+      }, 15 * 60 * 1000),
+    };
+
+    page.on("close", () => {
+      console.log("[*] [Lunar] Review mode browser window was closed.");
+      lunarActiveReviewSession = null;
+    });
+
     console.log(
-      "[*] [Lunar] Browser is live on screen. You can review and click Simpan whenever you wish.\n",
+      "[*] [Lunar] Active review session cached. Ready for remote inspection and submit.\n",
     );
-    // Keep process open in review mode
-    await new Promise(() => {});
+
+    if (isWeb) {
+      return {
+        success: true,
+        reviewMode: true,
+        screenshotBase64: reviewScreenshotBase64,
+        meta: lunarActiveReviewSession.meta,
+        message: "Formulir siap diperiksa di layar.",
+      };
+    } else {
+      console.log(
+        "[*] [Lunar] Browser is live on screen. You can review and click Simpan whenever you wish.\n",
+      );
+      await new Promise(() => {});
+    }
   }
+}
+
+export async function lunarConfirmReviewSubmit() {
+  if (!lunarActiveReviewSession || !lunarActiveReviewSession.page) {
+    throw new Error(
+      "Tidak ada sesi review yang aktif atau sesi telah kadaluarsa (timeout 15 menit). Silakan muat ulang formulir."
+    );
+  }
+
+  const { page, browser, timeoutId } = lunarActiveReviewSession;
+  if (timeoutId) clearTimeout(timeoutId);
+
+  if (page.isClosed()) {
+    await lunarCloseReviewSession();
+    return { success: true, message: "Browser telah ditutup/disimpan sebelumnya." };
+  }
+
+  console.log('[*] [Lunar] Remote Submit Confirmation: Clicking "Simpan" (#btn_save)...');
+  await page.waitForSelector("#btn_save", { state: "visible", timeout: 8000 });
+  await page.click("#btn_save");
+
+  // Confirm SweetAlert modal: "Apa anda yakin data untuk di simpan ?" -> click "Ya"
+  console.log('[*] [Lunar] Waiting for SweetAlert confirmation ("Ya")...');
+  try {
+    const confirmBtn = await page.waitForSelector(
+      'button.swal2-confirm:has-text("Ya"), button.swal2-confirm, .swal2-actions button:has-text("Ya")',
+      { timeout: 8000, state: "visible" },
+    );
+    if (confirmBtn) {
+      console.log('[*] [Lunar] Clicking SweetAlert confirmation "Ya"...');
+      await page.waitForTimeout(300);
+      try {
+        await confirmBtn.click({ force: true });
+      } catch (_) {
+        await page.evaluate(() => {
+          const btn = document.querySelector("button.swal2-confirm");
+          if (btn) btn.click();
+        });
+      }
+    }
+  } catch (e) {
+    console.log(
+      "[!] [Lunar] SweetAlert confirmation not found or timed out:",
+      e.message,
+    );
+  }
+
+  // Wait for AJAX response or success modal (auto-closing in Si-Pangaduan)
+  try {
+    await Promise.race([
+      page.waitForResponse(
+        (res) => res.url().includes("simpan") && res.status() === 200,
+        { timeout: 8000 }
+      ),
+      page.waitForSelector(
+        ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
+        { timeout: 8000 }
+      ),
+    ]);
+  } catch (_) {}
+
+  if (!page.isClosed()) {
+    try {
+      await page.waitForTimeout(1200);
+    } catch (_) {}
+  }
+
+  console.log(
+    "[+] [Lunar] Form successfully submitted and confirmed via remote trigger!",
+  );
+
+  await lunarCloseReviewSession();
+  return { success: true, message: "Formulir Berhasil Disimpan ke Si-Pangaduan!" };
 }
 
 function discoverSiblingProjects(basePath) {
@@ -1850,6 +2341,8 @@ export function startDocumentationServer({
       const options = loadPortalOptions();
       const templates = loadItTemplates();
       const discoveredProjects = discoverSiblingProjects(currentRepoPath);
+      const recentCommits = lunar_getRecentCommits(currentRepoPath, 25);
+      const today = lunar_getTodayDateString();
 
       sendJson({
         user: CURRENT_USER,
@@ -1857,6 +2350,8 @@ export function startDocumentationServer({
         repoPath: currentRepoPath,
         repoName: path.basename(currentRepoPath),
         commit: commitInfo,
+        recentCommits,
+        today,
         discoveredProjects,
         recentProjects: settings.recentProjects || [currentRepoPath],
         settings,
@@ -1904,12 +2399,82 @@ export function startDocumentationServer({
         commitInfo = { hash, msg: msgParts.join(" - ") };
       } catch (_) {}
 
+      const recentCommits = lunar_getRecentCommits(currentRepoPath, 25);
+      const today = lunar_getTodayDateString();
+
       sendJson({
         success: true,
         repoPath: currentRepoPath,
         repoName: path.basename(currentRepoPath),
         commit: commitInfo,
+        recentCommits,
+        today,
         recentProjects: settings.recentProjects,
+      });
+      return;
+    }
+
+    // 2.02 Get Recent Git Commits for Multi-Select Endpoint
+    if (req.method === "GET" && url.pathname === "/api/git-commits") {
+      const targetRepo = url.searchParams.get("repoPath") || currentRepoPath;
+      const limit = parseInt(url.searchParams.get("limit") || "25", 10);
+      const commits = lunar_getRecentCommits(targetRepo, limit);
+      sendJson({
+        success: true,
+        repoPath: targetRepo,
+        today: lunar_getTodayDateString(),
+        commits,
+      });
+      return;
+    }
+
+    // 2.05 Get Local Ollama Models Endpoint
+    if (req.method === "GET" && url.pathname === "/api/ollama-models") {
+      const settings = getEffectiveSettings();
+      const ollamaBaseUrl =
+        url.searchParams.get("url") ||
+        settings.ollamaUrl ||
+        "http://127.0.0.1:11434";
+      const defaultModels = [
+        "qwen2.5-coder:7b",
+        "qwen2.5:7b",
+        "gemma2:2b",
+        "gemma:2b",
+        "llama3.2:latest",
+        "deepseek-r1:8b",
+        "mistral:latest",
+        "luna:latest",
+      ];
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const tagsRes = await fetch(`${ollamaBaseUrl.replace(/\/+$/, "")}/api/tags`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (tagsRes.ok) {
+          const tagsData = await tagsRes.json();
+          const installedList = (tagsData.models || []).map(
+            (m) => m.name || m.model,
+          );
+          const combined = [
+            ...installedList,
+            ...defaultModels.filter((dm) => !installedList.includes(dm)),
+          ];
+          sendJson({
+            success: true,
+            running: true,
+            models: combined,
+            installedModels: installedList,
+          });
+          return;
+        }
+      } catch (_) {}
+      sendJson({
+        success: true,
+        running: false,
+        models: defaultModels,
+        installedModels: [],
       });
       return;
     }
@@ -2002,13 +2567,23 @@ export function startDocumentationServer({
     if (req.method === "POST" && url.pathname === "/api/generate-diff-card") {
       const body = await readBody();
       const targetRepo = body.repoPath || currentRepoPath;
+      const selectedCommits = Array.isArray(body.commits) ? body.commits : [];
+      const todayStr = body.today || lunar_getTodayDateString();
       try {
-        const targetOut = path.resolve(targetRepo, "git_diff_evidence.png");
         const diffPath = await generateGitDiffCard({
           repoPath: targetRepo,
-          outPath: targetOut,
+          commits: selectedCommits,
+          today: todayStr,
         });
-        sendJson({ success: true, path: diffPath });
+        sendJson({
+          success: true,
+          path: diffPath,
+          relativePath: `documentation/changes-${todayStr}.png`,
+          filename: `changes-${todayStr}.png`,
+          today: todayStr,
+          isMerged: selectedCommits.length > 1,
+          count: selectedCommits.length,
+        });
       } catch (err) {
         sendJson({ success: false, error: err.message }, 500);
       }
@@ -2018,13 +2593,21 @@ export function startDocumentationServer({
     // 4. Stream Generated Diff Image Endpoint
     if (req.method === "GET" && url.pathname === "/api/diff-evidence-image") {
       const targetRepo = url.searchParams.get("repoPath") || currentRepoPath;
-      const imgPath = path.resolve(targetRepo, "git_diff_evidence.png");
+      const todayStr = url.searchParams.get("today") || lunar_getTodayDateString();
+      const customFile = url.searchParams.get("file");
+      const docImgPath = customFile
+        ? path.resolve(targetRepo, "documentation", customFile)
+        : path.resolve(targetRepo, "documentation", `changes-${todayStr}.png`);
+      const rootImgPath = path.resolve(targetRepo, "git_diff_evidence.png");
       const fallbackPath = path.resolve(__dirname, "git_diff_evidence.png");
-      const actualPath = fs.existsSync(imgPath)
-        ? imgPath
-        : fs.existsSync(fallbackPath)
-          ? fallbackPath
-          : null;
+
+      const actualPath = fs.existsSync(docImgPath)
+        ? docImgPath
+        : fs.existsSync(rootImgPath)
+          ? rootImgPath
+          : fs.existsSync(fallbackPath)
+            ? fallbackPath
+            : null;
 
       if (actualPath) {
         res.writeHead(200, { "Content-Type": "image/png" });
@@ -2039,13 +2622,25 @@ export function startDocumentationServer({
     // 4.1 Raw Diff Text Endpoint
     if (req.method === "GET" && url.pathname === "/api/raw-diff") {
       const targetRepo = url.searchParams.get("repoPath") || currentRepoPath;
-      const commitInfo = getLatestCommitInfo(targetRepo);
-      const rawDiff = getEffectiveGitDiff(targetRepo);
+      const commitsParam = url.searchParams.get("commits");
+      let commitHashes = [];
+      if (commitsParam) {
+        commitHashes = commitsParam
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean);
+      }
+      const commitInfo = lunar_getMergedCommitInfo(targetRepo, commitHashes);
+      const rawDiff = commitHashes.length
+        ? lunar_getDiffForCommits(targetRepo, commitHashes)
+        : getEffectiveGitDiff(targetRepo);
 
       sendJson({
         success: true,
         repoPath: targetRepo,
         commit: { hash: commitInfo.commitHash, msg: commitInfo.commitMsg },
+        isMerged: commitInfo.isMerged,
+        count: commitInfo.count,
         diff:
           rawDiff ||
           "Tidak ada perubahan git terdeteksi (working tree bersih).",
@@ -2057,83 +2652,157 @@ export function startDocumentationServer({
     if (req.method === "POST" && url.pathname === "/api/generate-notes") {
       const body = await readBody();
       const targetRepo = body.repoPath || currentRepoPath;
+      const selectedCommits = Array.isArray(body.commits) ? body.commits : [];
       const settings = getEffectiveSettings();
       const apiKey =
         body.apiKey || settings.geminiApiKey || process.env.GEMINI_API_KEY;
       const repoBase = path.basename(targetRepo);
+      const aiMode = body.aiMode || settings.aiMode || "gemini_fallback";
+      const localModel =
+        body.model || body.localModel || settings.localModel || "qwen2.5-coder:7b";
+      const ollamaUrl =
+        body.ollamaUrl || settings.ollamaUrl || "http://127.0.0.1:11434";
 
       try {
         let notes = null;
-        const commitInfo = getLatestCommitInfo(targetRepo);
+        let usedEngine = "Template Standar";
+        const commitInfo = lunar_getMergedCommitInfo(targetRepo, selectedCommits);
         const commitMsg = commitInfo.commitMsg;
-        const gitDiff = getEffectiveGitDiff(targetRepo);
+        const gitDiff = selectedCommits.length
+          ? lunar_getDiffForCommits(targetRepo, selectedCommits)
+          : getEffectiveGitDiff(targetRepo);
         let changedFiles = [];
 
         try {
-          changedFiles = execSync('git show --name-only --format="" HEAD', {
-            cwd: targetRepo,
-          })
-            .toString()
-            .trim()
-            .split("\n")
-            .filter(Boolean);
+          if (selectedCommits.length === 1) {
+            changedFiles = execSync(
+              `git show --name-only --format="" ${selectedCommits[0]}`,
+              { cwd: targetRepo }
+            )
+              .toString()
+              .trim()
+              .split("\n")
+              .filter(Boolean);
+          } else {
+            changedFiles = execSync('git show --name-only --format="" HEAD', {
+              cwd: targetRepo,
+            })
+              .toString()
+              .trim()
+              .split("\n")
+              .filter(Boolean);
+          }
         } catch (_) {}
 
-        if (!changedFiles.length) {
-          try {
-            changedFiles = execSync("git diff --name-only HEAD", {
-              cwd: targetRepo,
-            })
-              .toString()
-              .trim()
-              .split("\n")
-              .filter(Boolean);
-          } catch (_) {}
-        }
-        if (!changedFiles.length) {
-          try {
-            changedFiles = execSync("git diff --name-only", {
-              cwd: targetRepo,
-            })
-              .toString()
-              .trim()
-              .split("\n")
-              .filter(Boolean);
-          } catch (_) {}
+        if (!changedFiles.length && gitDiff) {
+          const lines = gitDiff.split("\n");
+          for (const l of lines) {
+            if (l.startsWith("diff --git")) {
+              const parts = l.split(/\s+/);
+              if (parts.length >= 4) {
+                const f = parts[3].replace(/^[a-z]\//, "");
+                if (f && !changedFiles.includes(f)) changedFiles.push(f);
+              }
+            }
+          }
         }
 
-        const noteContext = { repoName: repoBase, commitMsg, changedFiles };
+        const noteContext = {
+          repoName: repoBase,
+          commitMsg,
+          changedFiles,
+          ollamaUrl,
+          commits: commitInfo.commits || [],
+          isMerged: commitInfo.isMerged,
+        };
 
         if (gitDiff) {
-          // Priority 1: Google Gemini 2.5 Flash if API key available
-          if (apiKey) {
-            notes = await generateReleaseNotesWithGemini(
-              gitDiff,
-              apiKey,
-              noteContext,
-            );
-          }
-          // Priority 2: Local Ollama (smart models or gemma:2b)
-          if (!notes) {
+          if (aiMode === "local_only") {
+            console.log(`[*] [Lunar] AI Mode: Local Only (${localModel})`);
             notes = await generateReleaseNotesWithOllama(
               gitDiff,
-              body.model || "gemma:2b",
+              localModel,
               noteContext,
             );
+            if (notes) usedEngine = `Local AI (${localModel})`;
+          } else if (aiMode === "gemini_only") {
+            console.log(`[*] [Lunar] AI Mode: Gemini Only`);
+            if (apiKey) {
+              notes = await generateReleaseNotesWithGemini(
+                gitDiff,
+                apiKey,
+                noteContext,
+              );
+              if (notes) usedEngine = "Google Gemini";
+            }
+          } else {
+            // Mode: gemini_fallback (Primary: Gemini, Fallback: Local AI)
+            console.log(
+              `[*] [Lunar] AI Mode: Gemini with Fallback to Local AI (${localModel})`,
+            );
+            if (apiKey) {
+              try {
+                notes = await generateReleaseNotesWithGemini(
+                  gitDiff,
+                  apiKey,
+                  noteContext,
+                );
+                if (notes) usedEngine = "Google Gemini";
+              } catch (geminiErr) {
+                console.log(
+                  `[!] [Lunar] Gemini failed (${geminiErr.message}), switching to Local AI fallback...`,
+                );
+              }
+            } else {
+              console.log(
+                `[*] [Lunar] No Gemini API key provided. Directly engaging Local AI fallback (${localModel})...`,
+              );
+            }
+
+            if (!notes) {
+              console.log(
+                `[*] [Lunar] Running Local AI fallback with model: ${localModel}...`,
+              );
+              notes = await generateReleaseNotesWithOllama(
+                gitDiff,
+                localModel,
+                noteContext,
+              );
+              if (notes) usedEngine = `Local AI Fallback (${localModel})`;
+            }
           }
         }
 
         if (!notes) {
-          const filesSummary = changedFiles
-            .slice(0, 3)
-            .map((f) => path.basename(f))
-            .join(", ");
-          notes = `Perbaikan Aplikasi & Pemeliharaan Modul (${repoBase})
+          if (commitInfo.isMerged && commitInfo.commits?.length > 1) {
+            const commitBullets = commitInfo.commits
+              .map((c) => `• [${c.hash}] ${c.msg}`)
+              .join("\n");
+            const filesSummary = changedFiles
+              .slice(0, 4)
+              .map((f) => path.basename(f))
+              .join(", ");
+            notes = `Penggabungan Pembaruan & Pemeliharaan Modul (${repoBase})
+Daftar Commit yang Digabungkan:
+${commitBullets}
+
+Rincian Pekerjaan:
+• Integrasi dan penggabungan ${commitInfo.count} komitmen perubahan fitur pada modul ${filesSummary || repoBase}.
+• Pembaruan alur kerja logika aplikasi dan sinkronisasi fungsionalitas sistem.
+• Pengujian konsistensi data dan verifikasi stabilitas antarmuka pengguna.`;
+          } else {
+            const filesSummary = changedFiles
+              .slice(0, 3)
+              .map((f) => path.basename(f))
+              .join(", ");
+            notes = `Perbaikan Aplikasi & Pemeliharaan Modul (${repoBase})
 ${commitMsg ? `Komitmen: ${commitMsg}\n` : ""}
 Rincian Pekerjaan:
 • Pembaruan fungsionalitas dan pemeliharaan kode pada modul ${filesSummary || repoBase}.
 • Penyesuaian antarmuka pengguna serta validasi alur kerja sistem informasi.
 • Verifikasi fungsionalitas dan pengujian integrasi untuk memastikan stabilitas modul.`;
+          }
+          usedEngine = "Template Fallback";
         }
 
         // Strict sanitization and truncation fixes
@@ -2145,7 +2814,13 @@ Rincian Pekerjaan:
           changedFiles,
         );
 
-        sendJson({ success: true, notes });
+        sendJson({
+          success: true,
+          notes,
+          usedEngine,
+          isMerged: commitInfo.isMerged,
+          commitsCount: commitInfo.count,
+        });
       } catch (err) {
         sendJson({ success: false, error: err.message }, 500);
       }
@@ -2155,6 +2830,7 @@ Rincian Pekerjaan:
     // 5b. Analyze Image Endpoint (IT Support & Programmer)
     if (req.method === "POST" && url.pathname === "/api/analyze-image") {
       const body = await readBody();
+      const settings = getEffectiveSettings();
       try {
         const result = await analyzeSupportEvidenceImage({
           imageBase64: body.imageBase64,
@@ -2166,8 +2842,11 @@ Rincian Pekerjaan:
               : "evidence_support.png"),
           unitValue: body.unitValue,
           jenisAduanValue: body.jenisAduanValue,
-          apiKey: body.apiKey,
+          apiKey: body.apiKey || settings.geminiApiKey,
           role: body.role || "it_support",
+          aiMode: body.aiMode || settings.aiMode,
+          localModel: body.localModel || settings.localModel,
+          ollamaUrl: body.ollamaUrl || settings.ollamaUrl,
         });
         sendJson(result);
       } catch (err) {
@@ -2246,9 +2925,10 @@ Rincian Pekerjaan:
     if (req.method === "POST" && url.pathname === "/api/submit") {
       const body = await readBody();
       try {
-        runDocumentationIT({
+        const result = await runDocumentationIT({
           role: body.role,
           namaPengadu: body.namaPengadu,
+          petugasValue: body.petugasValue,
           unitValue: body.unitValue,
           jenisAduanValue: body.jenisAduanValue,
           noRm: body.noRm || "-",
@@ -2262,14 +2942,37 @@ Rincian Pekerjaan:
           waktuPenyelesaian: body.waktuPenyelesaian,
           timestampAnchor: body.timestampAnchor || "selesai",
           randomDelta: !!body.randomDelta,
-        }).catch((err) =>
-          console.error("[!] Background automation error:", err),
-        );
+          isWeb: true,
+        });
 
         sendJson({
           success: true,
-          message: "Automation dispatched successfully",
+          ...result,
         });
+      } catch (err) {
+        console.error("[!] Error in /api/submit:", err);
+        sendJson({ success: false, error: err.message }, 500);
+      }
+      return;
+    }
+
+    // 7. Confirm Review Submit Endpoint
+    if (req.method === "POST" && url.pathname === "/api/confirm-review-submit") {
+      try {
+        const result = await lunarConfirmReviewSubmit();
+        sendJson({ success: true, ...result });
+      } catch (err) {
+        console.error("[!] Error in /api/confirm-review-submit:", err);
+        sendJson({ success: false, error: err.message }, 500);
+      }
+      return;
+    }
+
+    // 8. Cancel Review Endpoint
+    if (req.method === "POST" && url.pathname === "/api/cancel-review") {
+      try {
+        await lunarCloseReviewSession();
+        sendJson({ success: true, message: "Sesi review berhasil dibatalkan." });
       } catch (err) {
         sendJson({ success: false, error: err.message }, 500);
       }
@@ -2295,6 +2998,7 @@ Rincian Pekerjaan:
   }
 
   server.on("close", () => {
+    lunarCloseReviewSession().catch(() => {});
     for (const lunarWatcher of lunarFileWatchers) {
       try {
         lunarWatcher.close();
@@ -2407,10 +3111,14 @@ async function runInteractiveCLI() {
     )) || "1";
   const role = roleAnswer.trim() === "2" ? "it_support" : "programmer";
 
-  const defaultNama = settings.defaultNama || CURRENT_USER;
+  const defaultNamaPengadu = settings.defaultNamaPengadu || "Petugas IT";
   const namaPengadu =
-    (await rl.question(`2. Nama Pengadu [default: ${defaultNama}]: `)) ||
-    defaultNama;
+    (await rl.question(`2. Nama Pengadu (Pelapor) [default: ${defaultNamaPengadu}]: `)) ||
+    defaultNamaPengadu;
+  const defaultPetugas = settings.petugasValue || settings.portalUsername || "01229";
+  const petugasValue =
+    (await rl.question(`2b. Yang Mengerjakan (Kode/NIP Petugas IT) [default: ${defaultPetugas}]: `)) ||
+    defaultPetugas;
   const unitValue =
     (await rl.question(
       `3. Dari Unit [default: ${settings.defaultUnit || "44"}]: `,
@@ -2454,9 +3162,17 @@ async function runInteractiveCLI() {
   } else {
     const aiAnswer =
       (await rl.question(
-        "5. Gunakan Local AI (Gemma 2B) via Ollama untuk rangkum git diff? [y/N]: ",
-      )) || "n";
-    useOllama = aiAnswer.toLowerCase().startsWith("y");
+        `5. Gunakan AI via Local AI (Ollama) / Gemini untuk rangkum git diff? [Y/n]: `,
+      )) || "y";
+    useOllama = !aiAnswer.toLowerCase().startsWith("n");
+    if (useOllama) {
+      const modelAnswer = await rl.question(
+        `   Pilih model Local AI [default: ${settings.localModel || "qwen2.5-coder:7b"}]: `,
+      );
+      if (modelAnswer && modelAnswer.trim()) {
+        settings.localModel = modelAnswer.trim();
+      }
+    }
   }
 
   const simpanAnswer =
@@ -2470,12 +3186,13 @@ async function runInteractiveCLI() {
   await runDocumentationIT({
     role,
     namaPengadu,
+    petugasValue,
     unitValue,
     jenisAduanValue,
     isiKomplain,
     screenshotPath,
     useOllama,
-    ollamaModel: "gemma:2b",
+    ollamaModel: settings.localModel || "qwen2.5-coder:7b",
     clickSimpan,
     portalUsername: settings.portalUsername,
     portalPassword: settings.portalPassword,

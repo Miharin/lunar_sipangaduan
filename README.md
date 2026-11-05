@@ -13,10 +13,15 @@ Sistem otomatisasi dan dashboard visual modern untuk mencatat dokumentasi pemeli
 ## ⚡ Fitur Utama
 
 1. **Dual-Track Workflow:**
-   - **Track Programmer:** Otomatis membaca `git log` dan `git diff` dari repositori aktif, menghasilkan kartu visual kode diff (**~300ms**), membuat catatan rilis formal (via Ollama `gemma:2b` atau parser deterministik), serta opsi **📸 Upload Foto Manual** yang dilengkapi **Analisis Multimodal AI Vision** (Google Gemini Vision / Ollama / OCR) untuk merangkum screenshot UI/error modul langsung ke kolom Isi Komplain.
+   - **Track Programmer:** Otomatis membaca `git log` dan `git diff` dari repositori aktif, menyediakan **Multi-Commit Selection (Checkbox)** untuk menggabungkan beberapa commit ke dalam 1 kartu diff terintegrasi (*documentation merge*), menghasilkan kartu visual kode diff (**~300ms**) yang tersimpan otomatis di `documentation/changes-${today}.png`, membuat catatan rilis formal (via Ollama `gemma:2b`, Google Gemini, atau parser deterministik), serta opsi **📸 Upload Foto Manual** yang dilengkapi **Analisis Multimodal AI Vision** (Google Gemini Vision / Ollama / OCR) untuk merangkum screenshot UI/error modul langsung ke kolom Isi Komplain.
    - **Track IT Support:** Dilengkapi 11 katalog template 1-klik untuk aduan harian rumah sakit (printer macet, LAN putus, reset akun SIMRS, dll), upload foto bukti dengan deteksi screenshot otomatis, analisis cerdas Google Gemini Vision / OCR, serta tombol **📁 Pilih Foto Lain** untuk mengganti foto kapan saja dengan 1 klik.
 
-2. **📁 Multi-Project Repository Path Switcher:**
+2. **🔖 Multi-Commit Selection & Documentation Merge (`documentation/changes-${today}.png`):**
+   - **Checkbox Multi-Select:** Memungkinkan memilih beberapa commit sekaligus (misal 2-5 commit dalam sehari) dengan tombol cepat `⚡ 1 Terakhir`, `📅 Hari Ini`, `☑️ Semua`, dan `✖️ Reset`.
+   - **Documentation Merge:** Menggabungkan perubahan kode (unified git diff) serta merangkum semua judul commit ke dalam satu kesatuan catatan rilis terpadu.
+   - **Penyimpanan Gambar Bukti Terstruktur:** Gambar kartu bukti diff otomatis tersimpan rapi di dalam subfolder `documentation/` di repositori project aktif dengan penamaan tanggal otomatis `changes-${today}.png` (contoh: `documentation/changes-2026-11-05.png`) dan otomatis diunggah ke `#filex` Si-Pangaduan.
+
+3. **📁 Multi-Project Repository Path Switcher:**
    - Secara otomatis mendeteksi project repositori tetangga dalam folder yang sama (misal: `fe_remedis_ranap`, `fe_remedis_rajal`, `rev_vault`, dll).
    - Mendukung input path manual fleksibel untuk Linux maupun Windows (`D:\Projects\...`).
    - Otomatis memperbarui riwayat commit, merender ulang kartu diff, dan menganalisis catatan rilis seketika saat berpindah project.
@@ -40,6 +45,10 @@ Sistem otomatisasi dan dashboard visual modern untuk mencatat dokumentasi pemeli
 7. **🛡️ Zero-Float & DateRangePicker Invariants:**
    - Menghitung rentang tanggal dan jam pengerjaan secara presisi matematis tanpa float rounding error.
    - Mensinkronkan nilai langsung ke jQuery DateRangePicker portal (`#reservation3` dan `#reservation31`).
+
+8. **🚀 Remote Visual Inspection & Remote Submit Mode:**
+   - **Pratinjau Snapshot Server Langsung:** Saat mengakses web dari perangkat remote (laptop/HP via IP LAN) dan menekan *🚀 Buka di Si-Pangaduan (Review Mode)*, Playwright mengisi formulir di server PC (dengan fallback otomatis ke mode headless jika tanpa display), mengambil snapshot resolusi tinggi dari portal yang telah terisi, dan menampilkannya di jendela modal review di layar remote.
+   - **Remote Trigger Simpan:** Pengguna dapat memeriksa kelengkapan isi formulir secara visual di layar laptop/HP, lalu menekan **🚀 Konfirmasi & Simpan Sekarang** untuk memicu penyimpanan dan konfirmasi SweetAlert dari jarak jauh.
 
 ---
 

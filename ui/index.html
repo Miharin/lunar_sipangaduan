@@ -17,6 +17,7 @@
         rel="stylesheet">
     <style>
         :root {
+            color-scheme: dark;
             --bg-base: #07060b;
             --bg-surface: #110d1c;
             --bg-card: #181326;
@@ -258,6 +259,42 @@
         .input-textarea:focus {
             background: #110d1c;
             box-shadow: var(--shadow-crimson-active);
+        }
+
+        /* Lunar Universal Select & Native Option Theme Shield */
+        select,
+        .input-select {
+            color-scheme: dark;
+        }
+
+        select option,
+        .input-select option,
+        option {
+            background-color: #181326 !important;
+            color: #f8fafc !important;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            padding: 8px 12px;
+        }
+
+        select option:checked,
+        .input-select option:checked,
+        option:checked {
+            background-color: #2b2144 !important;
+            color: #fb7185 !important;
+        }
+
+        .lunar-select-transparent {
+            background: transparent !important;
+            border: none !important;
+            outline: none !important;
+            cursor: pointer;
+            box-shadow: none !important;
+        }
+
+        .lunar-select-transparent:focus {
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
         }
 
         .input-textarea {
@@ -890,10 +927,10 @@
             <!-- User Switcher -->
             <div class="pill" style="gap:8px;">
                 <span>👤</span>
-                <select id="header-user-select" class="input-select"
-                    style="padding: 2px 6px; font-size:12px; width:auto; border:none; background:transparent;"
+                <select id="header-user-select" class="input-select lunar-select-transparent"
+                    style="padding: 2px 6px; font-size:12px; width:auto; border:none; background:transparent; cursor:pointer;"
                     onchange="handleUserSwitch(this.value)">
-                    <option value="sigit">Sigit</option>
+                    <option value="alfin">Alfin</option>
                     <option value="__new__">+ Tambah Profil Baru...</option>
                 </select>
             </div>
@@ -928,8 +965,37 @@
                 </div>
 
                 <div class="field-group">
-                    <label class="field-label" for="input-nama">Nama Pengadu</label>
-                    <input type="text" id="input-nama" class="input-text" placeholder="Nama Petugas IT">
+                    <label class="field-label" for="input-nama">
+                        <span>Nama Pengadu (Pelapor)</span>
+                        <span style="font-size:11px; color:var(--text-sub);">Pihak yang mengadu</span>
+                    </label>
+                    <input type="text" id="input-nama" class="input-text" placeholder="Misal: Petugas Rekam Medik / Bidan Maya / Suster Ani">
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="select-petugas">
+                        <span>Yang Mengerjakan (Petugas IT)</span>
+                        <span id="badge-petugas-count" style="font-size:11px; color:var(--text-sub);">15 Petugas Live</span>
+                    </label>
+                    <div class="search-select-wrapper" id="combobox-petugas">
+                        <div class="search-select-trigger" id="trigger-petugas" onclick="toggleDropdown('petugas')">
+                            <span class="trigger-text" id="label-petugas">Memuat petugas...</span>
+                            <span class="trigger-arrow">▾</span>
+                        </div>
+                        <div class="search-select-dropdown" id="dropdown-petugas" style="display:none;">
+                            <div class="search-box-container">
+                                <span>🔍</span>
+                                <input type="text" class="search-box-input" id="search-petugas"
+                                    placeholder="Cari nama atau NIP petugas IT..."
+                                    oninput="filterOptions('petugas', this.value)" autocomplete="off">
+                                <button type="button" class="search-box-clear" onclick="clearSearch('petugas')">✕</button>
+                            </div>
+                            <div class="search-options-list" id="list-petugas"></div>
+                        </div>
+                    </div>
+                    <select id="select-petugas" style="display:none;" onchange="syncFromNativeSelect('petugas')">
+                        <option value="01229" selected>01229 - Alfin</option>
+                    </select>
                 </div>
 
                 <div class="field-group">
@@ -1094,12 +1160,61 @@
 
             <!-- Right Column: Content & Evidence -->
             <div class="glass-card">
-                <div class="card-title">
+                <div class="card-title" style="margin-bottom:8px;">
                     <span id="label-content-title">📝 Uraian Pekerjaan & Foto Bukti</span>
-                    <div style="display:flex; gap:8px;">
-                        <button id="btn-ai-generate" class="btn btn-secondary"
-                            style="padding: 6px 12px; font-size:12px;" onclick="generateAiNotes()">
-                            ✨ Generate Catatan (Ollama / Diff)
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span id="badge-ai-status" class="pill"
+                            style="font-size:11px; padding:3px 10px; background:rgba(139, 92, 246, 0.18); color:#c4b5fd; border:1px solid rgba(139, 92, 246, 0.35);">
+                            ● AI Ready
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Sleek Lunar AI Bar: Mode & Model Selector (User-chosen local model, no blind sequential guessing) -->
+                <div id="ai-engine-bar" class="lunar-ai-bar"
+                    style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px; padding:8px 12px; background:rgba(23, 17, 39, 0.7); border:1px solid rgba(139, 92, 246, 0.22); border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <label for="select-ai-mode" style="font-size:11.5px; font-weight:700; color:var(--text-muted); cursor:pointer;">
+                                🤖 Mesin AI:
+                            </label>
+                            <select id="select-ai-mode" class="input-select" onchange="lunar_onAiModeChange(this.value)"
+                                style="padding:4px 8px; font-size:11.5px; border-radius:8px; background:rgba(15, 11, 26, 0.95); color:#f3f0ff; border:1px solid rgba(139, 92, 246, 0.4); font-weight:600; cursor:pointer;">
+                                <option value="gemini_fallback">✨ Gemini (Fallback Local AI)</option>
+                                <option value="local_only">💻 Local AI Saja (Ollama)</option>
+                                <option value="gemini_only">☁️ Gemini Saja</option>
+                            </select>
+                        </div>
+
+                        <div id="container-local-model-select" style="display:flex; align-items:center; gap:6px; transition:opacity 0.2s ease;">
+                            <label for="select-local-model" style="font-size:11.5px; font-weight:700; color:var(--text-muted); cursor:pointer;">
+                                🦙 Model Local:
+                            </label>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <select id="select-local-model" class="input-select" onchange="lunar_onLocalModelChange(this.value)"
+                                    style="padding:4px 8px; font-size:11.5px; border-radius:8px; background:rgba(15, 11, 26, 0.95); color:#e9d5ff; border:1px solid rgba(139, 92, 246, 0.4); font-weight:600; max-width:180px; cursor:pointer;"
+                                    title="Pilih model local Ollama Anda">
+                                    <option value="qwen2.5-coder:7b">qwen2.5-coder:7b</option>
+                                    <option value="gemma2:2b">gemma2:2b</option>
+                                    <option value="gemma:2b">gemma:2b</option>
+                                    <option value="llama3.2:latest">llama3.2:latest</option>
+                                    <option value="deepseek-r1:8b">deepseek-r1:8b</option>
+                                    <option value="mistral:latest">mistral:latest</option>
+                                    <option value="__custom__">➕ Ketik Model Lain...</option>
+                                </select>
+                                <button type="button" class="btn-mini btn-mini-secondary" title="Deteksi Model Terpasang dari Ollama" onclick="lunar_refreshOllamaModels(true)"
+                                    style="padding:3px 7px; font-size:11px; border-radius:6px; background:rgba(139, 92, 246, 0.15); border:1px solid rgba(139, 92, 246, 0.3);">
+                                    🔄
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button id="btn-ai-generate" type="button" class="btn btn-primary"
+                            style="padding:6px 14px; font-size:12px; font-weight:700; border-radius:8px; box-shadow:0 2px 10px rgba(139, 92, 246, 0.35);"
+                            onclick="generateAiNotes()">
+                            ✨ Generate Catatan
                         </button>
                     </div>
                 </div>
@@ -1127,6 +1242,47 @@
                         style="background: rgba(139, 92, 246, 0.16); box-shadow: var(--shadow-elevation-1); border-radius: 10px; justify-content: space-between; width:100%; margin-top:2px; border: none;">
                         <span id="label-commit">Commit: Membaca riwayat git...</span>
                         <span style="color: #c4b5fd; font-size:11px; font-weight:700;">Git Auto-Sync</span>
+                    </div>
+
+                    <!-- Multi-Commit Selection for Merge Documentation -->
+                    <div id="container-commit-multiselect" style="margin-top: 10px; background: rgba(18, 14, 28, 0.7); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 12px; padding: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.25);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:12px; font-weight:700; color:#ddd6fe; display:flex; align-items:center; gap:5px;">
+                                    <span>🔖</span> Pilih Commit untuk Digabung (Merge Documentation)
+                                </span>
+                                <span id="badge-selected-commits-count" class="pill" style="background:rgba(139, 92, 246, 0.25); color:#c4b5fd; font-size:11px; padding:2px 8px; font-weight:700; border:none;">
+                                    1 Terpilih
+                                </span>
+                            </div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button type="button" class="btn-mini btn-mini-secondary" style="padding:3px 8px; font-size:10.5px;" onclick="lunar_selectOnlyLatestCommit()" title="Pilih hanya commit terbaru">
+                                    ⚡ 1 Terakhir
+                                </button>
+                                <button type="button" class="btn-mini btn-mini-primary" style="padding:3px 8px; font-size:10.5px;" onclick="lunar_selectAllTodayCommits()" title="Pilih semua commit yang dibuat hari ini">
+                                    📅 Hari Ini
+                                </button>
+                                <button type="button" class="btn-mini btn-mini-secondary" style="padding:3px 8px; font-size:10.5px;" onclick="lunar_selectAllCommitsInList()" title="Pilih semua commit dalam daftar">
+                                    ☑️ Semua
+                                </button>
+                                <button type="button" class="btn-mini btn-mini-secondary" style="padding:3px 8px; font-size:10.5px; color:#fb7185;" onclick="lunar_clearCommitSelection()" title="Reset pilihan commit">
+                                    ✖️ Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable commits list -->
+                        <div id="commits-list-wrapper" style="max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 4px;">
+                            <div style="color:var(--text-muted); font-size:11px; text-align:center; padding:10px;">
+                                Memuat daftar commit...
+                            </div>
+                        </div>
+
+                        <!-- Merge action summary bar -->
+                        <div id="commit-merge-summary-bar" style="margin-top:8px; padding:6px 10px; background:rgba(139,92,246,0.12); border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#c4b5fd; flex-wrap:wrap; gap:6px;">
+                            <span id="commit-merge-desc">⚡ 1 commit aktif.</span>
+                            <span id="commit-evidence-dest-badge" style="color:#34d399; font-weight:600; font-family:monospace;">📁 documentation/changes-${today}.png</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1198,6 +1354,11 @@
                             <span>⚡ Klik "Regenerate Card" untuk membuat kartu bukti instan (300ms).</span>
                         </div>
                         <img id="diff-card-img" style="display:none;" alt="Bukti Git Diff">
+                    </div>
+
+                    <div id="diff-card-save-info" style="font-size:11.5px; color:#a78bfa; margin-top:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <span>📁 Bukti Tersimpan: <b id="diff-card-save-path" style="font-family:monospace; color:#34d399;">documentation/changes-...png</b></span>
+                        <span id="diff-card-merge-badge" class="pill" style="display:none; background:rgba(139,92,246,0.25); color:#c4b5fd; font-size:10.5px; padding:2px 8px; font-weight:700;">Merged Documentation</span>
                     </div>
 
                     <div id="diff-raw-container" style="display:none;">
@@ -1394,6 +1555,55 @@
         </div>
     </div>
 
+    <!-- Modal Remote Review Overlay -->
+    <div class="modal-overlay" id="modal-remote-review" style="display:none; z-index: 120;">
+        <div class="modal-content" style="max-width: 980px; width: 95%; max-height: 92vh; padding: 22px 26px; gap: 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="pill-dot" style="background: var(--accent-color);"></div>
+                    <h3 style="font-size: 17px; font-weight: 700; color: #fff;">🔍 Pratinjau Si-Pangaduan (Remote Review Mode)</h3>
+                </div>
+                <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;" onclick="cancelRemoteReview()">✕</button>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;" id="review-meta-badges">
+                <!-- Badges populated dynamically -->
+            </div>
+
+            <!-- Screenshot Viewport -->
+            <div style="position: relative; background: #0c0a15; border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;">
+                <div style="background: rgba(255,255,255,0.04); padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: var(--text-muted);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #10b981; font-weight: 600;">● Live Capture</span>
+                        <span>Snapshot Formulir Terisi dari Server PC (Desktop 1600px)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button type="button" class="btn btn-secondary" id="btn-toggle-zoom" style="padding: 4px 10px; font-size: 11px;" onclick="toggleReviewZoom()">
+                            🔍 Mode Ukuran Asli (100%)
+                        </button>
+                        <a id="review-full-link" href="#" target="_blank" style="color: var(--accent-color); text-decoration: none; font-weight: 600;">↗️ Tab Baru</a>
+                    </div>
+                </div>
+                <div id="review-viewport-container" style="max-height: 56vh; overflow-y: auto; overflow-x: auto; text-align: center; padding: 12px; background: #07060c;">
+                    <img id="review-screenshot-img" src="" alt="Pratinjau Formulir Si-Pangaduan" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.6); transition: all 0.2s ease;" />
+                </div>
+            </div>
+
+            <!-- Action Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+                <span style="font-size: 12px; color: var(--text-muted);">Periksa kelengkapan isi formulir di atas sebelum klik konfirmasi simpan.</span>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" id="btn-cancel-remote-review" onclick="cancelRemoteReview()">
+                        ✕ Batalkan Review
+                    </button>
+                    <button class="btn btn-emerald" id="btn-confirm-remote-review" onclick="confirmRemoteSubmit()">
+                        🚀 Konfirmasi & Simpan Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Settings Drawer -->
     <div class="modal-overlay" id="modal-settings">
         <div class="modal-content">
@@ -1412,19 +1622,28 @@
                 </select>
             </div>
 
-            <div class="field-group">
-                <label class="field-label" for="setting-nama">Nama Petugas (Nama Pengadu)</label>
-                <input type="text" id="setting-nama" class="input-text" placeholder="Sigit">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="field-group">
+                    <label class="field-label" for="setting-nama">Nama Pengadu (Pelapor)</label>
+                    <input type="text" id="setting-nama" class="input-text" placeholder="Alfin">
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="setting-petugas">Yang Mengerjakan (Petugas IT)</label>
+                    <select id="setting-petugas" class="input-select">
+                        <!-- Populated dynamically via JS -->
+                    </select>
+                </div>
             </div>
 
-            <div class="field-group">
-                <label class="field-label" for="setting-user">Username Akun Si-Pangaduan</label>
-                <input type="text" id="setting-user" class="input-text" placeholder="01229">
-            </div>
-
-            <div class="field-group">
-                <label class="field-label" for="setting-pass">Password Si-Pangaduan</label>
-                <input type="password" id="setting-pass" class="input-text" placeholder="••••••">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="field-group">
+                    <label class="field-label" for="setting-user">Username Akun Si-Pangaduan</label>
+                    <input type="text" id="setting-user" class="input-text" placeholder="01229">
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="setting-pass">Password Si-Pangaduan</label>
+                    <input type="password" id="setting-pass" class="input-text" placeholder="••••••">
+                </div>
             </div>
 
             <div class="field-group">
@@ -1434,11 +1653,42 @@
 
             <div class="field-group">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <label class="field-label" for="setting-gemini-key" style="margin-bottom:0;">Google Gemini API Key (Vision Analysis)</label>
+                    <label class="field-label" for="setting-gemini-key" style="margin-bottom:0;">Google Gemini API Key (Vision & Cloud AI)</label>
                     <a href="https://aistudio.google.com/app/api-keys" target="_blank" rel="noopener noreferrer" style="font-size:11px; color:#fb7185; text-decoration:underline;">Dapatkan Kunci Gratis di Google AI Studio ↗</a>
                 </div>
-                <input type="password" id="setting-gemini-key" class="input-text" placeholder="AIzaSy... (Opsional, untuk analisis foto hardware & layar error akurat)">
-                <span style="display:block; font-size:11px; color:var(--text-sub); margin-top:4px;">Menggunakan Gemini 2.5 Flash Vision untuk mendeteksi kendala IT Support (printer macet, LAN putus, monitor blank, BSOD, SIMRS error) dari foto.</span>
+                <input type="password" id="setting-gemini-key" class="input-text" placeholder="AIzaSy... (Opsional, untuk cloud intelligence)">
+                <span style="display:block; font-size:11px; color:var(--text-sub); margin-top:4px;">Digunakan sebagai AI utama untuk ringkasan commit dan visi analisis foto kendala IT / SIMRS.</span>
+            </div>
+
+            <!-- Konfigurasi Mesin AI & Local AI (Ollama) -->
+            <div class="field-group" style="padding:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(139,92,246,0.22); border-radius:10px;">
+                <label class="field-label" style="font-size:12.5px; color:#c4b5fd; margin-bottom:8px;">⚙️ Konfigurasi Local AI (Ollama) & Fallback</label>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                    <div>
+                        <label class="field-label" for="setting-ai-mode" style="font-size:11px;">Strategi / Mode AI:</label>
+                        <select id="setting-ai-mode" class="input-select" style="font-size:11.5px; padding:6px 8px; width:100%;">
+                            <option value="gemini_fallback">✨ Gemini (Fallback Local AI)</option>
+                            <option value="local_only">💻 Local AI Saja (Ollama)</option>
+                            <option value="gemini_only">☁️ Gemini Saja</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <label class="field-label" for="setting-local-model" style="font-size:11px;">Model Local Pilihan:</label>
+                            <a href="javascript:void(0)" onclick="lunar_refreshOllamaModels(true)" style="font-size:10px; color:#c4b5fd; text-decoration:underline;">Deteksi 🔄</a>
+                        </div>
+                        <select id="setting-local-model" class="input-select" style="font-size:11.5px; padding:6px 8px; width:100%;">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="field-label" for="setting-ollama-url" style="font-size:11px;">Host URL Ollama:</label>
+                    <input type="text" id="setting-ollama-url" class="input-text" value="http://127.0.0.1:11434" placeholder="http://127.0.0.1:11434">
+                    <span style="display:block; font-size:10.5px; color:var(--text-sub); margin-top:3px;">Alamat server Ollama lokal (default port: 11434).</span>
+                </div>
             </div>
 
             <div style="display:flex; justify-content:space-between; gap:12px; margin-top:8px;">
@@ -1610,9 +1860,13 @@
         let discoveredProjects = [];
         let evidenceImagePath = null;
         let initData = {};
-        let portalOptions = { unitOptions: [], jenisAduanOptions: [] };
+        let portalOptions = { unitOptions: [], jenisAduanOptions: [], petugasOptions: [] };
         let appSettings = { profiles: [] };
         let itTemplates = [];
+        let lunarRecentCommits = [];
+        let lunarSelectedCommitHashes = [];
+        let lunarTodayDateString = '';
+        let lunarCommitDebounceTimer = null;
 
         // 1. Initial Load & Sync
         async function fetchInitialData() {
@@ -1621,10 +1875,14 @@
                 initData = await res.json();
 
                 appSettings = initData.settings || { profiles: [] };
-                portalOptions = initData.options || { unitOptions: [], jenisAduanOptions: [] };
+                portalOptions = initData.options || { unitOptions: [], jenisAduanOptions: [], petugasOptions: [] };
                 itTemplates = initData.templates || [];
                 currentRepoPath = initData.repoPath || '';
                 discoveredProjects = initData.discoveredProjects || [];
+                lunarTodayDateString = initData.today || '';
+                if (Array.isArray(initData.recentCommits)) {
+                    lunarRecentCommits = initData.recentCommits;
+                }
 
                 populateSelectOptions();
                 populateUserProfiles();
@@ -1633,7 +1891,24 @@
                 const activeProf = getActiveProfile();
                 applyProfileToForm(activeProf);
 
+                if (!appSettings.aiMode) appSettings.aiMode = 'gemini_fallback';
+                if (!appSettings.localModel) appSettings.localModel = 'qwen2.5-coder:7b';
+                if (!appSettings.ollamaUrl) appSettings.ollamaUrl = 'http://127.0.0.1:11434';
+
+                const mainAiMode = document.getElementById('select-ai-mode');
+                if (mainAiMode) {
+                    mainAiMode.value = appSettings.aiMode;
+                    const container = document.getElementById('container-local-model-select');
+                    if (container) {
+                        container.style.opacity = (appSettings.aiMode === 'gemini_only') ? '0.35' : '1';
+                        container.style.pointerEvents = (appSettings.aiMode === 'gemini_only') ? 'none' : 'auto';
+                    }
+                }
+
+                await lunar_refreshOllamaModels(false);
+
                 updateProjectDisplay();
+                await lunar_fetchRecentCommits(true);
                 generateDiffCard();
                 setTimestampAnchor(currentTimestampAnchor);
                 const toggleRandomEl = document.getElementById('toggle-random-delta');
@@ -1719,8 +1994,10 @@
                     initData.repoPath = data.repoPath;
                     initData.repoName = data.repoName;
                     initData.commit = data.commit;
+                    if (data.today) lunarTodayDateString = data.today;
                     updateProjectDisplay();
                     closeProjectModal();
+                    await lunar_fetchRecentCommits(true);
                     // Automatically regenerate diff card and notes for the new project!
                     generateDiffCard();
                     generateAiNotes();
@@ -1749,9 +2026,10 @@
         function getActiveProfile() {
             const list = appSettings.profiles || [];
             return list.find(p => p.nama === appSettings.activeProfile || p.id === appSettings.activeProfile) || list[0] || {
-                nama: 'Sigit',
+                nama: 'Alfin',
                 portalUsername: '01229',
                 portalPassword: '123456',
+                petugasValue: '01229',
                 defaultUnit: '44',
                 defaultJenisAduan: '4'
             };
@@ -1787,6 +2065,10 @@
                 document.getElementById('setting-nama').value = '';
                 document.getElementById('setting-user').value = '';
                 document.getElementById('setting-pass').value = '';
+                const settingPetugas = document.getElementById('setting-petugas');
+                if (settingPetugas && portalOptions.petugasOptions?.[0]) {
+                    settingPetugas.value = portalOptions.petugasOptions[0].value;
+                }
                 return;
             }
             const prof = (appSettings.profiles || []).find(p => p.nama === val);
@@ -1794,12 +2076,30 @@
                 document.getElementById('setting-nama').value = prof.nama || '';
                 document.getElementById('setting-user').value = prof.portalUsername || '';
                 document.getElementById('setting-pass').value = prof.portalPassword || '';
+                const settingPetugas = document.getElementById('setting-petugas');
+                if (settingPetugas) {
+                    settingPetugas.value = prof.petugasValue || prof.portalUsername || '01229';
+                }
             }
         }
 
         function applyProfileToForm(prof) {
             if (!prof) return;
-            document.getElementById('input-nama').value = prof.nama || 'Sigit';
+            // 1. Nama Pengadu (Pelapor)
+            const inputPengadu = document.getElementById('input-nama');
+            if (inputPengadu) {
+                inputPengadu.value = prof.nama || 'Alfin';
+            }
+
+            // 2. Yang Mengerjakan (Petugas IT)
+            const targetPetugas = prof.petugasValue || prof.portalUsername || '01229';
+            const petugasSelect = document.getElementById('select-petugas');
+            if (petugasSelect) {
+                petugasSelect.value = targetPetugas;
+                syncFromNativeSelect('petugas');
+            }
+
+            // 3. Unit & Jenis Aduan
             if (prof.defaultUnit) {
                 document.getElementById('select-unit').value = prof.defaultUnit;
                 syncFromNativeSelect('unit');
@@ -1808,9 +2108,16 @@
                 document.getElementById('select-jenis').value = prof.defaultJenisAduan;
                 syncFromNativeSelect('jenis');
             }
-            document.getElementById('setting-user').value = prof.portalUsername || '01229';
-            document.getElementById('setting-pass').value = prof.portalPassword || '123456';
-            document.getElementById('setting-nama').value = prof.nama || 'Sigit';
+
+            // 4. Modal Settings Mirror
+            const settingUser = document.getElementById('setting-user');
+            if (settingUser) settingUser.value = prof.portalUsername || '01229';
+            const settingPass = document.getElementById('setting-pass');
+            if (settingPass) settingPass.value = prof.portalPassword || '123456';
+            const settingNama = document.getElementById('setting-nama');
+            if (settingNama) settingNama.value = prof.nama || 'Alfin';
+            const settingPetugas = document.getElementById('setting-petugas');
+            if (settingPetugas) settingPetugas.value = targetPetugas;
         }
 
         // 3. Render 1-Click Templates (Programmer, IT Support & Both)
@@ -2072,6 +2379,8 @@
         function populateSelectOptions() {
             const unitSelect = document.getElementById('select-unit');
             const jenisSelect = document.getElementById('select-jenis');
+            const petugasSelect = document.getElementById('select-petugas');
+            const settingPetugasSelect = document.getElementById('setting-petugas');
             const tplUnitSelect = document.getElementById('select-tpl-unit');
             const tplJenisSelect = document.getElementById('select-tpl-jenis');
 
@@ -2097,13 +2406,25 @@
                 if (badgeTplJenis) badgeTplJenis.textContent = `${portalOptions.jenisAduanOptions.length} Jenis Aduan`;
             }
 
+            if (portalOptions.petugasOptions && portalOptions.petugasOptions.length > 0) {
+                const petugasHtml = portalOptions.petugasOptions.map(p =>
+                    `<option value="${p.value}">${p.value} - ${p.text}</option>`
+                ).join('');
+                if (petugasSelect) petugasSelect.innerHTML = petugasHtml;
+                if (settingPetugasSelect) settingPetugasSelect.innerHTML = petugasHtml;
+                const badgePetugas = document.getElementById('badge-petugas-count');
+                if (badgePetugas) badgePetugas.textContent = `${portalOptions.petugasOptions.length} Petugas Live`;
+            }
+
             // Sync initial labels and render searchable options
             syncFromNativeSelect('unit');
             syncFromNativeSelect('jenis');
+            syncFromNativeSelect('petugas');
             if (tplUnitSelect) syncFromNativeSelect('tpl-unit');
             if (tplJenisSelect) syncFromNativeSelect('tpl-jenis');
             renderSearchOptions('unit');
             renderSearchOptions('jenis');
+            renderSearchOptions('petugas');
             if (tplUnitSelect) renderSearchOptions('tpl-unit');
             if (tplJenisSelect) renderSearchOptions('tpl-jenis');
         }
@@ -2134,7 +2455,7 @@
         }
 
         function closeAllDropdowns() {
-            ['unit', 'jenis', 'tpl-unit', 'tpl-jenis'].forEach(t => {
+            ['unit', 'jenis', 'petugas', 'tpl-unit', 'tpl-jenis'].forEach(t => {
                 const dd = document.getElementById(`dropdown-${t}`);
                 const trigger = document.getElementById(`trigger-${t}`);
                 const wrapper = document.getElementById(`combobox-${t}`);
@@ -2174,6 +2495,12 @@
                     value: u.value,
                     text: u.text,
                     label: `${u.value} - ${u.text}`
+                }));
+            } else if (type === 'petugas') {
+                items = (portalOptions.petugasOptions || []).map(p => ({
+                    value: p.value,
+                    text: p.text,
+                    label: `${p.value} - ${p.text}`
                 }));
             } else {
                 items = (portalOptions.jenisAduanOptions || []).map(j => ({
@@ -2250,11 +2577,142 @@
                 if (type === 'unit' || type === 'tpl-unit') {
                     const found = (portalOptions.unitOptions || []).find(u => String(u.value) === String(select.value));
                     label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
+                } else if (type === 'petugas') {
+                    const found = (portalOptions.petugasOptions || []).find(p => String(p.value) === String(select.value));
+                    label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
                 } else {
                     const found = (portalOptions.jenisAduanOptions || []).find(j => String(j.value) === String(select.value));
                     label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
                 }
             }
+        }
+
+        // ---------------------------------------------------------
+        // 4.5 Lunar AI Engine & Ollama Model Handlers
+        // ---------------------------------------------------------
+        async function lunar_refreshOllamaModels(showToast = false) {
+            const mainSelect = document.getElementById('select-local-model');
+            const modalSelect = document.getElementById('setting-local-model');
+            const statusBadge = document.getElementById('badge-ai-status');
+
+            if (showToast && statusBadge) {
+                statusBadge.textContent = '🔄 Mendeteksi...';
+                statusBadge.style.color = '#c084fc';
+            }
+
+            try {
+                const targetUrl = (appSettings.ollamaUrl || 'http://127.0.0.1:11434').trim();
+                const res = await fetch(`/api/ollama-models?url=${encodeURIComponent(targetUrl)}`);
+                const data = await res.json();
+                const models = (data && data.models && data.models.length) ? data.models : [
+                    'qwen2.5-coder:7b',
+                    'qwen2.5:7b',
+                    'gemma2:2b',
+                    'gemma:2b',
+                    'llama3.2:latest',
+                    'deepseek-r1:8b',
+                    'mistral:latest',
+                    'luna:latest'
+                ];
+
+                let currentChoice = appSettings.localModel || 'qwen2.5-coder:7b';
+                if (!models.includes(currentChoice) && currentChoice !== '__custom__') {
+                    models.unshift(currentChoice);
+                }
+
+                const buildHtml = (selVal) => {
+                    return models.map(m => {
+                        const isInstalled = data.installedModels && data.installedModels.includes(m);
+                        const tag = isInstalled ? ' (Terpasang)' : '';
+                        return `<option value="${m}" ${m === selVal ? 'selected' : ''}>${m}${tag}</option>`;
+                    }).join('') + `<option value="__custom__">➕ Ketik Model Lain...</option>`;
+                };
+
+                if (mainSelect) {
+                    mainSelect.innerHTML = buildHtml(currentChoice);
+                    mainSelect.value = currentChoice;
+                }
+                if (modalSelect) {
+                    modalSelect.innerHTML = buildHtml(currentChoice);
+                    modalSelect.value = currentChoice;
+                }
+
+                if (statusBadge) {
+                    if (data.running) {
+                        statusBadge.textContent = `● Ollama Aktif (${data.installedModels.length} model)`;
+                        statusBadge.style.color = '#34d399';
+                        statusBadge.style.background = 'rgba(52, 211, 153, 0.15)';
+                        statusBadge.style.borderColor = 'rgba(52, 211, 153, 0.35)';
+                    } else {
+                        statusBadge.textContent = `● Ollama Standby`;
+                        statusBadge.style.color = '#fbbf24';
+                        statusBadge.style.background = 'rgba(251, 191, 36, 0.15)';
+                        statusBadge.style.borderColor = 'rgba(251, 191, 36, 0.35)';
+                    }
+                }
+
+                if (showToast) {
+                    if (data.running) {
+                        alert(`✅ Terhubung ke Ollama!\nDitemukan ${data.installedModels.length} model terpasang:\n${data.installedModels.join(', ') || 'Belum ada model yang di-pull.'}`);
+                    } else {
+                        alert(`⚠️ Ollama belum aktif di ${targetUrl}.\nDaftar model tetap siap dipilih untuk fallback otomatis.`);
+                    }
+                }
+            } catch (err) {
+                console.error('[Lunar] Error fetching Ollama models:', err);
+                if (showToast) {
+                    alert('Gagal mendeteksi Ollama: ' + err.message);
+                }
+            }
+        }
+
+        function lunar_onAiModeChange(val) {
+            appSettings.aiMode = val;
+            const container = document.getElementById('container-local-model-select');
+            if (container) {
+                container.style.opacity = (val === 'gemini_only') ? '0.35' : '1';
+                container.style.pointerEvents = (val === 'gemini_only') ? 'none' : 'auto';
+            }
+            const modalSelect = document.getElementById('setting-ai-mode');
+            if (modalSelect) modalSelect.value = val;
+            saveSettings(false);
+        }
+
+        function lunar_onLocalModelChange(val) {
+            if (val === '__custom__') {
+                const customName = prompt('Ketikkan nama model Ollama (contoh: qwen2.5-coder:14b, deepseek-coder:6.7b, mistral:7b):');
+                if (customName && customName.trim()) {
+                    val = customName.trim();
+                    lunar_addCustomModelOption(val);
+                } else {
+                    val = appSettings.localModel || 'qwen2.5-coder:7b';
+                    const mainSelect = document.getElementById('select-local-model');
+                    if (mainSelect) mainSelect.value = val;
+                    return;
+                }
+            }
+            appSettings.localModel = val;
+            const modalSelect = document.getElementById('setting-local-model');
+            if (modalSelect) modalSelect.value = val;
+            saveSettings(false);
+        }
+
+        function lunar_addCustomModelOption(modelName) {
+            const selects = [
+                document.getElementById('select-local-model'),
+                document.getElementById('setting-local-model')
+            ];
+            selects.forEach(sel => {
+                if (!sel) return;
+                const existing = Array.from(sel.options).find(o => o.value === modelName);
+                if (!existing) {
+                    const opt = document.createElement('option');
+                    opt.value = modelName;
+                    opt.textContent = `${modelName} (Custom)`;
+                    sel.insertBefore(opt, sel.firstChild);
+                }
+                sel.value = modelName;
+            });
         }
 
         // 5. Settings Modal Handlers
@@ -2264,6 +2722,13 @@
             if (urlInput) urlInput.value = appSettings.portalUrl || 'http://192.168.0.152/it/';
             const geminiInput = document.getElementById('setting-gemini-key');
             if (geminiInput) geminiInput.value = appSettings.geminiApiKey || '';
+
+            const aiModeSelect = document.getElementById('setting-ai-mode');
+            if (aiModeSelect) aiModeSelect.value = appSettings.aiMode || 'gemini_fallback';
+            const localModelSelect = document.getElementById('setting-local-model');
+            if (localModelSelect) localModelSelect.value = appSettings.localModel || 'qwen2.5-coder:7b';
+            const ollamaUrlInput = document.getElementById('setting-ollama-url');
+            if (ollamaUrlInput) ollamaUrlInput.value = appSettings.ollamaUrl || 'http://127.0.0.1:11434';
 
             if (isNew) {
                 document.getElementById('modal-profile-select').value = '__new__';
@@ -2280,13 +2745,21 @@
         }
 
         async function saveSettings(showAlert = true) {
-            const selUserVal = document.getElementById('modal-profile-select').value;
-            const inputNama = document.getElementById('setting-nama').value.trim() || 'Sigit';
-            const inputUser = document.getElementById('setting-user').value.trim() || '01229';
-            const inputPass = document.getElementById('setting-pass').value.trim() || '123456';
-            const inputUrl = document.getElementById('setting-url').value.trim() || 'http://192.168.0.152/it/';
+            const selUserVal = document.getElementById('modal-profile-select')?.value;
+            const inputNama = document.getElementById('setting-nama')?.value.trim() || appSettings.activeProfile || 'Alfin';
+            const inputUser = document.getElementById('setting-user')?.value.trim() || appSettings.portalUsername || '01229';
+            const inputPass = document.getElementById('setting-pass')?.value.trim() || appSettings.portalPassword || '123456';
+            const inputPetugas = document.getElementById('setting-petugas')?.value || document.getElementById('select-petugas')?.value || inputUser;
+            const inputUrl = document.getElementById('setting-url')?.value.trim() || appSettings.portalUrl || 'http://192.168.0.152/it/';
             const geminiKeyEl = document.getElementById('setting-gemini-key');
             const inputGeminiKey = geminiKeyEl ? geminiKeyEl.value.trim() : (appSettings.geminiApiKey || '');
+
+            const aiModeEl = document.getElementById('setting-ai-mode');
+            const inputAiMode = aiModeEl ? aiModeEl.value : (appSettings.aiMode || 'gemini_fallback');
+            const localModelEl = document.getElementById('setting-local-model');
+            const inputLocalModel = localModelEl ? localModelEl.value : (appSettings.localModel || 'qwen2.5-coder:7b');
+            const ollamaUrlEl = document.getElementById('setting-ollama-url');
+            const inputOllamaUrl = ollamaUrlEl ? ollamaUrlEl.value.trim() : (appSettings.ollamaUrl || 'http://127.0.0.1:11434');
 
             let profiles = appSettings.profiles || [];
             let existingIdx = profiles.findIndex(p => p.nama === inputNama || p.id === selUserVal);
@@ -2297,17 +2770,19 @@
                     nama: inputNama,
                     portalUsername: inputUser,
                     portalPassword: inputPass,
-                    defaultUnit: document.getElementById('select-unit').value,
-                    defaultJenisAduan: document.getElementById('select-jenis').value
+                    petugasValue: inputPetugas,
+                    defaultUnit: document.getElementById('select-unit')?.value || profiles[existingIdx].defaultUnit,
+                    defaultJenisAduan: document.getElementById('select-jenis')?.value || profiles[existingIdx].defaultJenisAduan
                 };
-            } else {
+            } else if (inputNama) {
                 profiles.push({
                     id: inputNama.toLowerCase().replace(/\s+/g, '_'),
                     nama: inputNama,
                     portalUsername: inputUser,
                     portalPassword: inputPass,
-                    defaultUnit: document.getElementById('select-unit').value,
-                    defaultJenisAduan: document.getElementById('select-jenis').value
+                    petugasValue: inputPetugas,
+                    defaultUnit: document.getElementById('select-unit')?.value || '44',
+                    defaultJenisAduan: document.getElementById('select-jenis')?.value || '4'
                 });
             }
 
@@ -2315,7 +2790,12 @@
                 ...appSettings,
                 portalUrl: inputUrl,
                 geminiApiKey: inputGeminiKey,
+                aiMode: inputAiMode,
+                localModel: inputLocalModel,
+                ollamaUrl: inputOllamaUrl,
                 activeProfile: inputNama,
+                defaultNama: inputNama,
+                petugasValue: inputPetugas,
                 profiles: profiles
             };
 
@@ -2330,11 +2810,17 @@
                     appSettings = payload;
                     populateUserProfiles();
                     applyProfileToForm(getActiveProfile());
+                    
+                    const mainAiMode = document.getElementById('select-ai-mode');
+                    if (mainAiMode) mainAiMode.value = payload.aiMode;
+                    const mainLocalModel = document.getElementById('select-local-model');
+                    if (mainLocalModel) mainLocalModel.value = payload.localModel;
+
                     closeSettingsModal();
                     if (showAlert) alert('✅ Profil dan pengaturan berhasil disimpan ke lokal!');
                 }
             } catch (err) {
-                alert('Gagal menyimpan pengaturan: ' + err.message);
+                if (showAlert) alert('Gagal menyimpan pengaturan: ' + err.message);
             }
         }
 
@@ -2351,7 +2837,7 @@
                 if (result.success && result.options) {
                     portalOptions = result.options;
                     populateSelectOptions();
-                    alert(`✅ Sukses mengekstrak ${portalOptions.unitOptions.length} unit dan ${portalOptions.jenisAduanOptions.length} jenis aduan!`);
+                    alert(`✅ Sukses mengekstrak ${portalOptions.unitOptions.length} unit, ${portalOptions.jenisAduanOptions.length} jenis aduan, dan ${portalOptions.petugasOptions?.length || 0} petugas IT!`);
                 } else {
                     alert('Gagal mengekstrak opsi portal: ' + (result.error || 'Unknown error'));
                 }
@@ -2766,7 +3252,10 @@
                         unitValue: document.getElementById('select-unit').value,
                         jenisAduanValue: document.getElementById('select-jenis').value,
                         apiKey: appSettings.geminiApiKey || '',
-                        role: 'programmer'
+                        role: 'programmer',
+                        aiMode: appSettings.aiMode || 'gemini_fallback',
+                        localModel: appSettings.localModel || 'qwen2.5-coder:7b',
+                        ollamaUrl: appSettings.ollamaUrl || 'http://127.0.0.1:11434'
                     })
                 });
                 const data = await res.json();
@@ -2840,17 +3329,186 @@
             if (fileInput) fileInput.value = '';
         }
 
+        // --- Multi-Commit Selection & Documentation Merge Functions ---
+        async function lunar_fetchRecentCommits(autoSelectToday = true) {
+            try {
+                const res = await fetch('/api/git-commits?repoPath=' + encodeURIComponent(currentRepoPath) + '&limit=30&t=' + Date.now());
+                const data = await res.json();
+                if (data.success && Array.isArray(data.commits)) {
+                    lunarRecentCommits = data.commits;
+                    if (data.today) lunarTodayDateString = data.today;
+                }
+            } catch (err) {
+                console.warn('Gagal memuat commit:', err);
+            }
+
+            if (!lunarRecentCommits.length && initData.commit) {
+                lunarRecentCommits = [{
+                    hash: initData.commit.hash || 'HEAD',
+                    fullHash: initData.commit.hash || 'HEAD',
+                    msg: initData.commit.msg || 'Latest commit',
+                    author: '',
+                    date: '',
+                    relativeDate: 'recent',
+                    isToday: true
+                }];
+            }
+
+            if (autoSelectToday || !lunarSelectedCommitHashes.length) {
+                const todayCommits = lunarRecentCommits.filter(c => c.isToday);
+                if (todayCommits.length > 0) {
+                    lunarSelectedCommitHashes = todayCommits.map(c => c.hash);
+                } else if (lunarRecentCommits.length > 0) {
+                    lunarSelectedCommitHashes = [lunarRecentCommits[0].hash];
+                } else {
+                    lunarSelectedCommitHashes = [];
+                }
+            }
+
+            lunar_renderCommitList();
+            lunar_updateCommitSelectionUI();
+        }
+
+        function lunar_renderCommitList() {
+            const wrapper = document.getElementById('commits-list-wrapper');
+            if (!wrapper) return;
+
+            if (!lunarRecentCommits || !lunarRecentCommits.length) {
+                wrapper.innerHTML = `
+                    <div style="color:var(--text-muted); font-size:11px; text-align:center; padding:12px;">
+                        Tidak ada riwayat commit git terdeteksi di repositori ini.
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+            for (const c of lunarRecentCommits) {
+                const isChecked = lunarSelectedCommitHashes.includes(c.hash);
+                const bg = isChecked ? 'rgba(139, 92, 246, 0.22)' : 'rgba(255, 255, 255, 0.03)';
+                const border = isChecked ? '1px solid rgba(139, 92, 246, 0.5)' : '1px solid rgba(255, 255, 255, 0.05)';
+                html += `
+                    <label class="commit-item-row" style="display:flex; align-items:center; gap:9px; padding:6px 10px; border-radius:8px; cursor:pointer; background:${bg}; border:${border}; transition:all 0.15s ease;">
+                        <input type="checkbox" value="${escapeHtml(c.hash)}" ${isChecked ? 'checked' : ''} onchange="lunar_toggleCommitSelection('${escapeHtml(c.hash)}')" style="cursor:pointer; width:15px; height:15px; accent-color:#8b5cf6;">
+                        <span class="badge" style="background:${isChecked ? '#8b5cf6' : '#475569'}; color:#fff; padding:2px 6px; border-radius:4px; font-size:10.5px; font-family:monospace; font-weight:700;">${escapeHtml(c.hash)}</span>
+                        <span style="flex:1; font-size:11.5px; color:#e2e8f0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(c.msg)}">${escapeHtml(c.msg)}</span>
+                        ${c.isToday ? '<span style="background:rgba(34,197,94,0.22); color:#4ade80; font-size:10px; padding:2px 6px; border-radius:4px; font-weight:700; flex-shrink:0;">Hari Ini</span>' : ''}
+                        <span style="font-size:10.5px; color:#94a3b8; font-family:monospace; flex-shrink:0;">${escapeHtml(c.relativeDate)}</span>
+                    </label>
+                `;
+            }
+            wrapper.innerHTML = html;
+        }
+
+        function lunar_updateCommitSelectionUI() {
+            const count = lunarSelectedCommitHashes.length;
+            const countBadge = document.getElementById('badge-selected-commits-count');
+            const labelCommit = document.getElementById('label-commit');
+            const mergeDesc = document.getElementById('commit-merge-desc');
+            const destBadge = document.getElementById('commit-evidence-dest-badge');
+            const todayStr = lunarTodayDateString || new Date().toISOString().slice(0, 10);
+
+            if (countBadge) {
+                countBadge.textContent = `${count} Terpilih`;
+                countBadge.style.background = count > 1 ? 'rgba(139, 92, 246, 0.4)' : 'rgba(139, 92, 246, 0.25)';
+            }
+
+            if (destBadge) {
+                destBadge.textContent = `📁 documentation/changes-${todayStr}.png`;
+            }
+
+            if (count <= 1) {
+                const first = lunarRecentCommits.find(c => c.hash === lunarSelectedCommitHashes[0]) || lunarRecentCommits[0];
+                if (labelCommit) {
+                    labelCommit.textContent = first ? `Commit: ${first.hash} - ${first.msg}` : 'Commit: 1 Terpilih';
+                }
+                if (mergeDesc) {
+                    mergeDesc.textContent = '⚡ Commit tunggal aktif.';
+                }
+            } else {
+                if (labelCommit) {
+                    labelCommit.textContent = `Commit: Merging ${count} commits (${lunarSelectedCommitHashes.slice(0, 3).join(', ')}${count > 3 ? '...' : ''})`;
+                }
+                if (mergeDesc) {
+                    mergeDesc.textContent = `✨ Menggabungkan ${count} commit ke dalam satu diff card dan catatan!`;
+                }
+            }
+        }
+
+        function lunar_toggleCommitSelection(hash) {
+            const idx = lunarSelectedCommitHashes.indexOf(hash);
+            if (idx >= 0) {
+                if (lunarSelectedCommitHashes.length > 1) {
+                    lunarSelectedCommitHashes.splice(idx, 1);
+                } else {
+                    alert('Minimal 1 commit harus tetap dipilih.');
+                    lunar_renderCommitList();
+                    return;
+                }
+            } else {
+                lunarSelectedCommitHashes.push(hash);
+            }
+            lunar_onCommitSelectionChanged();
+        }
+
+        function lunar_onCommitSelectionChanged() {
+            lunar_renderCommitList();
+            lunar_updateCommitSelectionUI();
+            clearTimeout(lunarCommitDebounceTimer);
+            lunarCommitDebounceTimer = setTimeout(() => {
+                generateDiffCard();
+                if (activeEvidenceTab === 'raw') {
+                    fetchRawDiff();
+                }
+            }, 350);
+        }
+
+        function lunar_selectOnlyLatestCommit() {
+            if (lunarRecentCommits.length > 0) {
+                lunarSelectedCommitHashes = [lunarRecentCommits[0].hash];
+                lunar_onCommitSelectionChanged();
+            }
+        }
+
+        function lunar_selectAllTodayCommits() {
+            const todayCommits = lunarRecentCommits.filter(c => c.isToday);
+            if (todayCommits.length > 0) {
+                lunarSelectedCommitHashes = todayCommits.map(c => c.hash);
+            } else if (lunarRecentCommits.length > 0) {
+                lunarSelectedCommitHashes = [lunarRecentCommits[0].hash];
+            }
+            lunar_onCommitSelectionChanged();
+        }
+
+        function lunar_selectAllCommitsInList() {
+            if (lunarRecentCommits.length > 0) {
+                lunarSelectedCommitHashes = lunarRecentCommits.map(c => c.hash);
+                lunar_onCommitSelectionChanged();
+            }
+        }
+
+        function lunar_clearCommitSelection() {
+            if (lunarRecentCommits.length > 0) {
+                lunarSelectedCommitHashes = [lunarRecentCommits[0].hash];
+                lunar_onCommitSelectionChanged();
+            }
+        }
+
         async function fetchRawDiff() {
             const pre = document.getElementById('diff-raw-text');
             const label = document.getElementById('raw-diff-commit-label');
             if (!pre) return;
             pre.textContent = 'Memuat git diff...';
             try {
-                const res = await fetch('/api/raw-diff?repoPath=' + encodeURIComponent(currentRepoPath) + '&t=' + Date.now());
+                const commitsQuery = lunarSelectedCommitHashes.length
+                    ? '&commits=' + encodeURIComponent(lunarSelectedCommitHashes.join(','))
+                    : '';
+                const res = await fetch('/api/raw-diff?repoPath=' + encodeURIComponent(currentRepoPath) + commitsQuery + '&t=' + Date.now());
                 const data = await res.json();
                 if (data.success) {
                     if (data.commit) {
-                        label.textContent = `Commit: ${data.commit.hash || ''} - ${data.commit.msg || ''}`;
+                        label.textContent = data.isMerged
+                            ? `Merged Commits (${data.count}): ${data.commit.hash}`
+                            : `Commit: ${data.commit.hash || ''} - ${data.commit.msg || ''}`;
                     }
                     const raw = data.diff || 'Tidak ada perubahan git terdeteksi (working tree bersih).';
                     pre.innerHTML = formatDiffToHtml(raw);
@@ -2888,7 +3546,10 @@
                 const res = await fetch('/api/generate-diff-card', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ repoPath: currentRepoPath })
+                    body: JSON.stringify({
+                        repoPath: currentRepoPath,
+                        commits: lunarSelectedCommitHashes
+                    })
                 });
                 const data = await res.json();
                 if (data.success) {
@@ -2900,6 +3561,20 @@
                     img.src = '/api/diff-evidence-image?repoPath=' + encodeURIComponent(currentRepoPath) + '&t=' + Date.now();
                     img.style.display = 'block';
                     document.getElementById('diff-placeholder').style.display = 'none';
+
+                    const savePathEl = document.getElementById('diff-card-save-path');
+                    if (savePathEl) {
+                        savePathEl.textContent = data.relativePath || `documentation/changes-${data.today || 'today'}.png`;
+                    }
+                    const mergeBadge = document.getElementById('diff-card-merge-badge');
+                    if (mergeBadge) {
+                        if (data.isMerged) {
+                            mergeBadge.style.display = 'inline-block';
+                            mergeBadge.textContent = `Merged (${data.count} Commits)`;
+                        } else {
+                            mergeBadge.style.display = 'none';
+                        }
+                    }
                 }
                 if (activeEvidenceTab === 'raw') {
                     fetchRawDiff();
@@ -2982,27 +3657,60 @@
 
         async function generateAiNotes() {
             const textarea = document.getElementById('textarea-komplain');
-            textarea.value = 'Menganalisis git diff dengan AI...';
+            const originalVal = textarea.value;
+            const aiMode = document.getElementById('select-ai-mode')?.value || appSettings.aiMode || 'gemini_fallback';
+            const localModel = document.getElementById('select-local-model')?.value || appSettings.localModel || 'qwen2.5-coder:7b';
+            const statusBadge = document.getElementById('badge-ai-status');
+            const btn = document.getElementById('btn-ai-generate');
+
+            if (statusBadge) {
+                statusBadge.textContent = '⏳ Menganalisis...';
+                statusBadge.style.color = '#fbbf24';
+            }
+            if (btn) btn.disabled = true;
+
+            const modeLabel = aiMode === 'local_only'
+                ? `Local AI (${localModel})`
+                : (aiMode === 'gemini_only' ? 'Google Gemini' : `Gemini / Fallback ${localModel}`);
+            textarea.value = `Menganalisis git diff dengan ${modeLabel}...`;
 
             try {
                 const res = await fetch('/api/generate-notes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: 'gemma:2b',
+                        model: localModel,
+                        localModel: localModel,
+                        aiMode: aiMode,
                         repoPath: currentRepoPath,
-                        apiKey: appSettings.geminiApiKey || ''
+                        commits: lunarSelectedCommitHashes,
+                        apiKey: appSettings.geminiApiKey || '',
+                        ollamaUrl: appSettings.ollamaUrl || 'http://127.0.0.1:11434'
                     })
                 });
                 const data = await res.json();
                 if (data.success && data.notes) {
                     textarea.value = sanitizeLunaSignatureClient(data.notes);
+                    if (statusBadge) {
+                        statusBadge.textContent = `● Selesai (${data.usedEngine || 'AI'})`;
+                        statusBadge.style.color = '#34d399';
+                    }
                 } else if (!data.success && data.error) {
-                    textarea.value = 'Gagal menghasilkan catatan: ' + data.error;
+                    textarea.value = originalVal || ('Gagal menghasilkan catatan: ' + data.error);
+                    if (statusBadge) {
+                        statusBadge.textContent = '● Gagal AI';
+                        statusBadge.style.color = '#f87171';
+                    }
                 }
             } catch (err) {
                 console.error(err);
-                textarea.value = 'Gagal menghubungi server untuk generate catatan.';
+                textarea.value = originalVal || 'Gagal menghubungi server untuk generate catatan.';
+                if (statusBadge) {
+                    statusBadge.textContent = '● Error Koneksi';
+                    statusBadge.style.color = '#f87171';
+                }
+            } finally {
+                if (btn) btn.disabled = false;
             }
         }
 
@@ -3087,7 +3795,10 @@
                         fileName: fileName || 'evidence_support.png',
                         unitValue: document.getElementById('select-unit').value,
                         jenisAduanValue: document.getElementById('select-jenis').value,
-                        apiKey: appSettings.geminiApiKey || ''
+                        apiKey: appSettings.geminiApiKey || '',
+                        aiMode: appSettings.aiMode || 'gemini_fallback',
+                        localModel: appSettings.localModel || 'qwen2.5-coder:7b',
+                        ollamaUrl: appSettings.ollamaUrl || 'http://127.0.0.1:11434'
                     })
                 });
                 const data = await res.json();
@@ -3277,7 +3988,8 @@
         async function submitToPortal(clickSimpan = false) {
             const modal = document.getElementById('modal-loading');
             modal.style.display = 'flex';
-            document.getElementById('modal-title').textContent = clickSimpan ? 'Menyimpan ke Si-Pangaduan...' : 'Membuka Browser (Review Mode)...';
+            document.getElementById('modal-title').textContent = clickSimpan ? 'Menyimpan ke Si-Pangaduan...' : 'Membuka Browser & Mengisi Formulir...';
+            document.getElementById('modal-desc').textContent = clickSimpan ? 'Menyimpan tiket dan konfirmasi ke Si-Pangaduan...' : 'Playwright sedang login ke portal dan mengisi seluruh kolom secara presisi...';
 
             const activeProf = getActiveProfile();
 
@@ -3317,6 +4029,7 @@
             const payload = {
                 role: currentTrack,
                 namaPengadu: document.getElementById('input-nama').value,
+                petugasValue: document.getElementById('select-petugas')?.value || activeProf.petugasValue || activeProf.portalUsername || '01229',
                 unitValue: document.getElementById('select-unit').value,
                 jenisAduanValue: document.getElementById('select-jenis').value,
                 noRm: document.getElementById('input-norm').value,
@@ -3342,13 +4055,119 @@
 
                 modal.style.display = 'none';
                 if (result.success) {
-                    document.getElementById('footer-status').textContent = clickSimpan ? '✅ Formulir Berhasil Disimpan!' : '✅ Formulir Terisi di Layar!';
+                    if (result.reviewMode && result.screenshotBase64) {
+                        openRemoteReviewModal(result);
+                        document.getElementById('footer-status').textContent = '🔍 Pratinjau Si-Pangaduan Siap Diperiksa!';
+                    } else {
+                        document.getElementById('footer-status').textContent = clickSimpan ? '✅ Formulir Berhasil Disimpan!' : '✅ Formulir Terisi di Layar!';
+                        if (clickSimpan) {
+                            alert('🎉 Sukses! Formulir Si-Pangaduan telah berhasil disimpan.');
+                        }
+                    }
                 } else {
-                    alert('Gagal: ' + result.error);
+                    alert('Gagal: ' + (result.error || 'Terjadi kesalahan'));
                 }
             } catch (err) {
                 modal.style.display = 'none';
-                alert('Terjadi kesalahan saat memproses otomatisasi.');
+                alert('Terjadi kesalahan saat memproses otomatisasi: ' + err.message);
+            }
+        }
+
+        // 9b. Remote Review Modal Handlers
+        let isReviewZoomed = false;
+
+        function toggleReviewZoom() {
+            const img = document.getElementById('review-screenshot-img');
+            const btn = document.getElementById('btn-toggle-zoom');
+            if (!img) return;
+
+            isReviewZoomed = !isReviewZoomed;
+            if (isReviewZoomed) {
+                img.style.maxWidth = 'none';
+                img.style.width = '1600px';
+                if (btn) btn.textContent = '📐 Sesuaikan Layar';
+            } else {
+                img.style.maxWidth = '100%';
+                img.style.width = 'auto';
+                if (btn) btn.textContent = '🔍 Mode Ukuran Asli (100%)';
+            }
+        }
+
+        function openRemoteReviewModal(result) {
+            const modal = document.getElementById('modal-remote-review');
+            const img = document.getElementById('review-screenshot-img');
+            const fullLink = document.getElementById('review-full-link');
+            const badgesContainer = document.getElementById('review-meta-badges');
+            const btnZoom = document.getElementById('btn-toggle-zoom');
+
+            isReviewZoomed = false;
+            if (img) {
+                img.style.maxWidth = '100%';
+                img.style.width = 'auto';
+            }
+            if (btnZoom) {
+                btnZoom.textContent = '🔍 Mode Ukuran Asli (100%)';
+            }
+
+            if (result.screenshotBase64) {
+                img.src = result.screenshotBase64;
+                fullLink.href = result.screenshotBase64;
+            }
+
+            if (result.meta) {
+                const unitText = document.getElementById('select-unit')?.selectedOptions?.[0]?.text || result.meta.unitValue || '-';
+                const jenisText = document.getElementById('select-jenis')?.selectedOptions?.[0]?.text || result.meta.jenisAduanValue || '-';
+
+                badgesContainer.innerHTML = `
+                    <span class="badge" style="background:rgba(225,29,72,0.15); color:#fda4af; border:1px solid rgba(225,29,72,0.3); padding:4px 10px; border-radius:20px;">👤 Pelapor: ${escapeHtml(result.meta.namaPengadu || '-')}</span>
+                    <span class="badge" style="background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); padding:4px 10px; border-radius:20px;">🛠️ Petugas: ${escapeHtml(result.meta.petugasValue || '-')}</span>
+                    <span class="badge" style="background:rgba(168,85,247,0.15); color:#d8b4fe; border:1px solid rgba(168,85,247,0.3); padding:4px 10px; border-radius:20px;">🏥 ${escapeHtml(unitText)}</span>
+                    <span class="badge" style="background:rgba(234,179,8,0.15); color:#fde047; border:1px solid rgba(234,179,8,0.3); padding:4px 10px; border-radius:20px;">📌 ${escapeHtml(jenisText)}</span>
+                    <span class="badge" style="background:rgba(16,185,129,0.15); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:20px;">⏱️ ${escapeHtml(result.meta.waktuPenerimaan || '')} ➔ ${escapeHtml(result.meta.waktuPenyelesaian || '')}</span>
+                `;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        async function cancelRemoteReview() {
+            const modal = document.getElementById('modal-remote-review');
+            modal.style.display = 'none';
+            try {
+                await fetch('/api/cancel-review', { method: 'POST' });
+            } catch (_) {}
+            document.getElementById('footer-status').textContent = 'Sesi review dibatalkan.';
+        }
+
+        async function confirmRemoteSubmit() {
+            const confirmBtn = document.getElementById('btn-confirm-remote-review');
+            const cancelBtn = document.getElementById('btn-cancel-remote-review');
+            const originalText = confirmBtn.innerHTML;
+
+            confirmBtn.disabled = true;
+            cancelBtn.disabled = true;
+            confirmBtn.innerHTML = '⏳ Menyimpan ke Si-Pangaduan...';
+
+            try {
+                const res = await fetch('/api/confirm-review-submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    document.getElementById('modal-remote-review').style.display = 'none';
+                    document.getElementById('footer-status').textContent = '✅ Formulir Berhasil Disimpan!';
+                    alert('🎉 Sukses! Formulir Si-Pangaduan telah berhasil disimpan secara remote.');
+                } else {
+                    alert('Gagal menyimpan: ' + (result.error || 'Terjadi kesalahan'));
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan jaringan saat konfirmasi simpan: ' + err.message);
+            } finally {
+                confirmBtn.disabled = false;
+                cancelBtn.disabled = false;
+                confirmBtn.innerHTML = originalText;
             }
         }
 

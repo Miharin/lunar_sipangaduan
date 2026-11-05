@@ -418,5 +418,67 @@
       "value": "16",
       "text": "Kegitan pengadaan barang inventaris / pendampingan pihak ketiga (CV)"
     }
+  ],
+  "petugasOptions": [
+    {
+      "value": "00450",
+      "text": "AIDIL FITRA TISNA KUSUMA"
+    },
+    {
+      "value": "00540",
+      "text": "Basuki Ariawan, SKM, M.Eng"
+    },
+    {
+      "value": "00637",
+      "text": "Citra Krissandra Puspitasari, S.Kom"
+    },
+    {
+      "value": "00783",
+      "text": "SONY, S. Kom."
+    },
+    {
+      "value": "00862",
+      "text": "Gracia Ernando, S.Kom"
+    },
+    {
+      "value": "00864",
+      "text": "Ilham Akbar Siswanto, S.Kom"
+    },
+    {
+      "value": "00891",
+      "text": "Rozha Aulya Nurviyanti, S.Kom"
+    },
+    {
+      "value": "00968",
+      "text": "Fiqih Wahyudiansyah, S.Kom"
+    },
+    {
+      "value": "01136",
+      "text": "ALVIA OKTARIANI SETIAWATI, A.Md"
+    },
+    {
+      "value": "01189",
+      "text": "Lukmanul Hakim, S.kom"
+    },
+    {
+      "value": "01229",
+      "text": "Alfin"
+    },
+    {
+      "value": "01259",
+      "text": "Alfan Ainun Dafiq, S.Kom"
+    },
+    {
+      "value": "01433",
+      "text": "Muhammad Arya Fathorozi"
+    },
+    {
+      "value": "01434",
+      "text": "Mohamad Taufiq Rahmadi"
+    },
+    {
+      "value": "01435",
+      "text": "Aditya Ibrar Abdillah"
+    }
   ]
 }

@@ -1,15 +1,22 @@
 {
   "portalUrl": "http://192.168.0.152/it/",
   "geminiApiKey": "",
+  "aiMode": "gemini_fallback",
+  "localModel": "qwen2.5-coder:7b",
+  "ollamaUrl": "http://127.0.0.1:11434",
   "activeProfile": "Programmer",
   "portalUsername": "01229",
   "portalPassword": "123456",
+  "petugasValue": "01229",
+  "defaultNamaPengadu": "Petugas IT",
   "profiles": [
     {
       "id": "programmer",
       "nama": "Programmer",
       "portalUsername": "01229",
       "portalPassword": "123456",
+      "petugasValue": "01229",
+      "defaultNamaPengadu": "Petugas IT",
       "defaultUnit": "44",
       "defaultJenisAduan": "4"
     }
