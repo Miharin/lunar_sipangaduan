@@ -909,6 +909,86 @@
             box-shadow: 0 0 35px rgba(225, 29, 72, 0.35), inset 0 0 20px rgba(225, 29, 72, 0.15);
             transform: scale(1.01);
         }
+
+        /* Lunite Smart Fusion & Batch Queue Surfaces (Zero-Border Law) */
+        .lunite-fusion-card {
+            background: var(--bg-elevated);
+            border: none;
+            border-radius: 16px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: var(--shadow-elevation-2);
+            margin-bottom: 12px;
+        }
+
+        .lunite-queue-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: none;
+            border-radius: 20px;
+            padding: 20px 24px;
+            box-shadow: var(--shadow-elevation-3);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .lunite-queue-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 12px;
+            max-height: 360px;
+            overflow-y: auto;
+            padding: 2px;
+        }
+
+        .lunite-queue-card {
+            background: var(--bg-elevated);
+            border: none;
+            border-radius: 14px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: var(--shadow-elevation-1);
+            transition: all 0.2s ease;
+        }
+
+        .lunite-queue-card:hover {
+            background: var(--bg-elevated-high);
+            box-shadow: var(--shadow-elevation-2);
+            transform: translateY(-2px);
+        }
+
+        .lunite-queue-card.editing {
+            background: linear-gradient(145deg, rgba(139, 92, 246, 0.24), rgba(24, 19, 38, 0.96));
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+        }
+
+        .lunite-queue-thumb {
+            width: 54px;
+            height: 54px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: var(--bg-sunken);
+            box-shadow: var(--shadow-sunken);
+            flex-shrink: 0;
+        }
+
+        .lunite-batch-review-nav {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: var(--bg-elevated);
+            padding: 10px 14px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-elevation-1);
+            border: none;
+        }
     </style>
 </head>
 
@@ -1048,7 +1128,7 @@
                         </div>
                     </div>
                     <select id="select-jenis" style="display:none;"
-                        onchange="updateTimestamps(); syncFromNativeSelect('jenis');">
+                        onchange="luniteOnManualJenisChange(); syncFromNativeSelect('jenis');">
                         <option value="4" selected>Perbaikan Aplikasi</option>
                     </select>
                 </div>
@@ -1058,12 +1138,57 @@
                     <input type="text" id="input-norm" class="input-text" value="-">
                 </div>
 
+                <!-- Status & Di Lanjutkan (Full-width rows matching Si-Pangaduan #status & #profesi) -->
+                <div class="field-group">
+                    <label class="field-label" for="select-status">
+                        <span>Status</span>
+                        <span style="font-size:11px; color:var(--text-sub);">Status Penyelesaian Tiket</span>
+                    </label>
+                    <select id="select-status" class="input-select" onchange="luniteOnStatusChange(this.value)">
+                        <option value="1" selected>✅ Selesai</option>
+                        <option value="2">⏳ Tidak Selesai</option>
+                    </select>
+                </div>
+
+                <div class="field-group" id="field-group-dilanjutkan">
+                    <label class="field-label" for="select-dilanjutkan">
+                        <span>Di Lanjutkan</span>
+                        <span id="badge-dilanjutkan-state" style="font-size:11px; color:var(--text-sub);">Terkunci (Selesai)</span>
+                    </label>
+                    <div class="search-select-wrapper" id="combobox-dilanjutkan" style="opacity:0.45; pointer-events:none; transition:opacity 0.2s ease;">
+                        <div class="search-select-trigger" id="trigger-dilanjutkan" onclick="toggleDropdown('dilanjutkan')">
+                            <span class="trigger-text" id="label-dilanjutkan">-- Pilih Petugas Lanjutan --</span>
+                            <span class="trigger-arrow">▾</span>
+                        </div>
+                        <div class="search-select-dropdown" id="dropdown-dilanjutkan" style="display:none;">
+                            <div class="search-box-container">
+                                <span>🔍</span>
+                                <input type="text" class="search-box-input" id="search-dilanjutkan"
+                                    placeholder="Cari nama atau NIP petugas lanjutan..."
+                                    oninput="filterOptions('dilanjutkan', this.value)" autocomplete="off">
+                                <button type="button" class="search-box-clear" onclick="clearSearch('dilanjutkan')">✕</button>
+                            </div>
+                            <div class="search-options-list" id="list-dilanjutkan"></div>
+                        </div>
+                    </div>
+                    <select id="select-dilanjutkan" style="display:none;" onchange="syncFromNativeSelect('dilanjutkan')">
+                        <option value="" selected>-- Pilih Petugas Lanjutan --</option>
+                    </select>
+                </div>
+
                 <!-- Timestamps Box (Auto / Manual Modes) -->
                 <div class="time-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <span style="font-size:12px; font-weight:700;">⏱️ Waktu Pengerjaan</span>
                             <span class="time-badge" id="badge-duration">23h 59m Delta</span>
+                            <span id="lunite-template-duration-badge" class="pill"
+                                style="display:none; font-size:10px; padding:2px 8px; background:rgba(16, 185, 129, 0.2); color:#6ee7b7; border:none; gap:4px;">
+                                <span id="lunite-template-duration-label">🎯 Template 100%</span>
+                                <button type="button" onclick="luniteClearTemplateDurationOverride()"
+                                    style="background:none; border:none; color:#fda4af; cursor:pointer; font-size:10px; padding:0 2px;"
+                                    title="Reset durasi template">✕</button>
+                            </span>
                         </div>
                         <div
                             style="display:flex; gap:3px; background:var(--bg-sunken); padding:3px; border-radius:10px; box-shadow:var(--shadow-sunken); border:none;">
@@ -1428,8 +1553,28 @@
                     </div>
                 </div>
 
-                <!-- IT Support Evidence Section (Photo Upload, Screenshot Discovery & AI Vision Analysis) -->
+                <!-- IT Support Evidence Section (Chat Context Fusion, Multi-Photo Upload, Screenshot Discovery & AI Vision Analysis) -->
                 <div id="support-evidence-section" class="field-group" style="display:none;">
+                    <!-- Smart Fusion Context Card: WA Chat + Solution Hint -->
+                    <div class="lunite-fusion-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <span style="font-size:12px; font-weight:700; color:#fda4af;">
+                                💬 Pesan Aduan Asli & Analisis Gabungan (WA + Screenshot)
+                            </span>
+                            <button type="button" id="btn-analyze-support-fusion" class="btn-mini btn-mini-primary"
+                                style="padding:5px 12px; font-size:11px;" onclick="luniteAnalyzeSupportFusion()">
+                                ✨ Analisis Gabungan (Pesan + Foto)
+                            </button>
+                        </div>
+                        <textarea id="lunite-support-chat-input" class="input-textarea" style="min-height:74px; font-size:12.5px;"
+                            placeholder='Tempel pesan WA / chat dari ruangan di sini, misal: "selamat malam mabl alvia, mbak untuk surat MRS skrg tidak bisa di edit ya mbak diagnosanya? karena diagnosanya salah, pasien sudah terlayani dan pindah ke rawat inap"'></textarea>
+                        <input type="text" id="lunite-support-solution-input" class="input-text" style="font-size:12px; padding:8px 12px;"
+                            placeholder="🛠️ Catatan Tindakan / Solusi IT (Opsional), misal: Buka akses edit diagnosa MRS & verifikasi cetak ulang">
+                        <div id="lunite-fusion-summary"
+                            style="display:none; font-size:11px; color:#6ee7b7; background:rgba(16, 185, 129, 0.14); padding:7px 11px; border-radius:10px; box-shadow:var(--shadow-sunken); line-height:1.45;">
+                        </div>
+                    </div>
+
                     <div
                         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
                         <div style="display:flex; align-items:center; gap:8px;">
@@ -1439,7 +1584,7 @@
                                 style="display:none; font-size:10.5px; background:rgba(16, 185, 129, 0.22); color:#6ee7b7; box-shadow:0 2px 8px rgba(16, 185, 129, 0.25); border:none;">Foto
                                 Terlampir</span>
                         </div>
-                        <div style="display:flex; gap:6px;">
+                        <div style="display:flex; gap:6px; flex-wrap:wrap;">
                             <button type="button" id="btn-fetch-recent-shot" class="btn-mini btn-mini-secondary"
                                 style="padding:4px 10px; font-size:11px;" onclick="checkRecentScreenshot()">
                                 📸 Screenshot Terakhir
@@ -1461,20 +1606,20 @@
                         </div>
                     </div>
 
-                    <!-- Dropzone when no photo is active -->
+                    <!-- Dropzone when no photo is active (Supports single OR multiple screenshot drop!) -->
                     <div id="support-upload-container" class="dropzone"
                         onclick="document.getElementById('file-upload').click()">
-                        <input type="file" id="file-upload" style="display:none;" accept="image/*"
-                            onchange="handleSupportFileInput(this.files[0])">
+                        <input type="file" id="file-upload" style="display:none;" accept="image/*" multiple
+                            onchange="luniteHandleSupportFileList(this.files)">
                         <div
                             style="display:flex; flex-direction:column; align-items:center; gap:6px; pointer-events:none;">
                             <span style="font-size:32px;">📷</span>
                             <p id="label-upload-status"
                                 style="font-weight:700; font-size:13px; color:var(--text-main); margin:0;">
-                                Klik atau Drag & Drop Foto Bukti di Sini
+                                Klik atau Drag & Drop 1 atau Banyak Foto Bukti di Sini
                             </p>
                             <p style="font-size:11.5px; color:var(--text-sub); margin:0;">
-                                Atau langsung tekan <kbd
+                                Drop banyak screenshot sekaligus untuk otomatis masuk ke <b>Antrean Batch</b>, atau tekan <kbd
                                     style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono',monospace; color:var(--crimson-light);">Ctrl
                                     + V</kbd> untuk paste screenshot!
                             </p>
@@ -1524,6 +1669,35 @@
             </div>
         </div>
 
+        <!-- Staged Batch Queue Panel (Multiple Reports) -->
+        <section id="lunite-batch-queue-panel" class="lunite-queue-panel" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span style="font-size:15px; font-weight:800; color:var(--text-main);">📋 Antrean Laporan Batch</span>
+                    <span id="lunite-queue-count" class="pill"
+                        style="background:rgba(139, 92, 246, 0.25); color:#ddd6fe; font-weight:700; border:none;">0 Laporan</span>
+                    <span style="font-size:11.5px; color:var(--text-muted);">Kirim banyak tiket sekaligus dalam 1x login Playwright</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-secondary" style="padding:7px 14px; font-size:12px; color:#fda4af;"
+                        onclick="luniteClearBatchQueue()">
+                        🗑️ Kosongkan
+                    </button>
+                    <button type="button" class="btn btn-primary" style="padding:7px 14px; font-size:12px;"
+                        onclick="luniteSubmitBatchQueue(false)">
+                        🔍 Review Semua (1x Login)
+                    </button>
+                    <button type="button" class="btn btn-emerald" style="padding:7px 14px; font-size:12px;"
+                        onclick="luniteSubmitBatchQueue(true)">
+                        ⚡ Kirim Semua Otomatis
+                    </button>
+                </div>
+            </div>
+            <div id="lunite-queue-list" class="lunite-queue-grid">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </section>
+
         <!-- Floating Bottom Action Bar -->
         <div class="bottom-bar">
             <div style="display: flex; align-items:center; gap: 12px;">
@@ -1531,9 +1705,13 @@
                 <span id="footer-status" style="font-size: 13px; font-weight:600; color:var(--text-muted);">Siap Mengisi
                     Formulir</span>
             </div>
-            <div style="display: flex; gap: 12px;">
+            <div style="display: flex; gap: 10px; flex-wrap:wrap;">
                 <button class="btn btn-secondary" onclick="copyKomplainText()">
                     📋 Salin Teks
+                </button>
+                <button id="btn-lunite-add-queue" class="btn btn-secondary" style="background:rgba(139, 92, 246, 0.22); color:#ddd6fe;"
+                    onclick="luniteAddOrUpdateQueueFromForm()">
+                    ➕ Tambah ke Antrean
                 </button>
                 <button class="btn btn-primary" onclick="submitToPortal(false)">
                     🚀 Buka di Si-Pangaduan (Review Mode)
@@ -1568,6 +1746,16 @@
 
             <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px;" id="review-meta-badges">
                 <!-- Badges populated dynamically -->
+            </div>
+
+            <!-- Batch Review Navigation Bar (visible only in Batch Review Mode) -->
+            <div id="lunite-batch-review-bar" class="lunite-batch-review-nav">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button type="button" class="btn-mini btn-mini-secondary" onclick="luniteNavigateBatchReview(-1)">◀ Sebelumnya</button>
+                    <span id="lunite-batch-review-counter" style="font-size:12px; font-weight:700; color:#ddd6fe;">Laporan 1 / 1</span>
+                    <button type="button" class="btn-mini btn-mini-secondary" onclick="luniteNavigateBatchReview(1)">Berikutnya ▶</button>
+                </div>
+                <div id="lunite-batch-review-pills" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
             </div>
 
             <!-- Screenshot Viewport -->
@@ -1796,6 +1984,49 @@
                     placeholder="Rincian perbaikan atau pekerjaan..."></textarea>
             </div>
 
+            <!-- Template Duration & 100% Precision Settings -->
+            <div style="background:var(--bg-sunken); border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; box-shadow:var(--shadow-sunken);">
+                <span style="font-size:12px; font-weight:700; color:#c4b5fd;">⏱️ Pengaturan Waktu & Durasi Template</span>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label class="field-label" for="new-tpl-duration-preset" style="font-size:11px;">Target Durasi</label>
+                        <select id="new-tpl-duration-preset" class="input-select" style="font-size:12px; padding:7px 10px;"
+                            onchange="luniteOnTplDurationPresetChange(this.value)">
+                            <option value="auto">Ikuti Jenis Aduan</option>
+                            <option value="30">30 Menit</option>
+                            <option value="45">45 Menit</option>
+                            <option value="60">60 Menit (1 Jam)</option>
+                            <option value="120">120 Menit (2 Jam)</option>
+                            <option value="1439">23 Jam 59 Menit (1439m)</option>
+                            <option value="5759">3 Hari 23 Jam 59 Menit (5759m)</option>
+                            <option value="custom">Custom (Menit)...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label" for="new-tpl-duration-minutes" style="font-size:11px;">Durasi Custom (Menit)</label>
+                        <input type="number" id="new-tpl-duration-minutes" class="input-text" min="1" placeholder="Otomatis"
+                            style="font-size:12px; padding:7px 10px;" oninput="luniteOnTplDurationMinutesInput(this.value)">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div>
+                        <label class="field-label" for="new-tpl-duration-mode" style="font-size:11px;">Presisi Durasi</label>
+                        <select id="new-tpl-duration-mode" class="input-select" style="font-size:12px; padding:7px 10px;">
+                            <option value="strict_100">🎯 100% Penuh (Tanpa Acak)</option>
+                            <option value="follow_global">🎲 Ikuti Sakelar Acak (85-100%)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="field-label" for="new-tpl-anchor" style="font-size:11px;">Patokan Waktu</label>
+                        <select id="new-tpl-anchor" class="input-select" style="font-size:12px; padding:7px 10px;">
+                            <option value="">Biarkan Patokan Aktif</option>
+                            <option value="selesai">🏁 Selesai Hari Ini</option>
+                            <option value="terima">📥 Terima Hari Ini</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:8px;">
                 <button class="btn btn-secondary" onclick="closeAddTemplateModal()">Batal</button>
                 <button id="btn-save-tpl" class="btn btn-primary" onclick="saveNewTemplate()">💾 Simpan
@@ -1895,6 +2126,7 @@
 
                 const activeProf = getActiveProfile();
                 applyProfileToForm(activeProf);
+                luniteOnStatusChange(document.getElementById('select-status')?.value || '1');
 
                 if (!appSettings.aiMode) appSettings.aiMode = 'gemini_fallback';
                 if (!appSettings.localModel) appSettings.localModel = 'qwen2.5-coder:7b';
@@ -1924,6 +2156,7 @@
                 }
                 updateTimestamps();
                 setupSupportImageEvents();
+                luniteLoadBatchQueue();
             } catch (err) {
                 console.error('Failed to init:', err);
             }
@@ -2134,6 +2367,55 @@
 
         // 3. Render 1-Click Templates (Programmer, IT Support & Both)
         let currentTplFilter = 'all';
+        let luniteActiveTemplateDurationMinutes = null;
+        let luniteActiveTemplateDurationMode = null;
+
+        function luniteFormatMinutesLabel(totalMins) {
+            const minsNum = Number(totalMins);
+            if (!Number.isFinite(minsNum) || minsNum <= 0) return '';
+            const days = Math.floor(minsNum / (24 * 60));
+            const hours = Math.floor((minsNum % (24 * 60)) / 60);
+            const mins = minsNum % 60;
+            const parts = [];
+            if (days > 0) parts.push(`${days}d`);
+            if (hours > 0) parts.push(`${hours}h`);
+            if (mins > 0 || parts.length === 0) parts.push(`${mins}m`);
+            return parts.join(' ');
+        }
+
+        function luniteSyncTemplateDurationBadge() {
+            const badgeEl = document.getElementById('lunite-template-duration-badge');
+            const labelEl = document.getElementById('lunite-template-duration-label');
+            if (!badgeEl || !labelEl) return;
+
+            if (luniteActiveTemplateDurationMinutes || luniteActiveTemplateDurationMode === 'strict_100') {
+                const durPart = luniteActiveTemplateDurationMinutes
+                    ? luniteFormatMinutesLabel(luniteActiveTemplateDurationMinutes)
+                    : 'Jenis';
+                const modePart = luniteActiveTemplateDurationMode === 'strict_100' ? '100% Lock' : 'Auto';
+                labelEl.textContent = `🎯 ${durPart} · ${modePart}`;
+                badgeEl.style.display = 'inline-flex';
+            } else {
+                badgeEl.style.display = 'none';
+            }
+        }
+
+        function luniteClearTemplateDurationOverride() {
+            luniteActiveTemplateDurationMinutes = null;
+            luniteActiveTemplateDurationMode = null;
+            luniteSyncTemplateDurationBadge();
+            updateTimestamps();
+            if (currentTimeMode === 'manual') {
+                syncManualFromAuto();
+            }
+        }
+
+        function luniteOnManualJenisChange() {
+            luniteActiveTemplateDurationMinutes = null;
+            luniteActiveTemplateDurationMode = null;
+            luniteSyncTemplateDurationBadge();
+            updateTimestamps();
+        }
 
         function filterTemplatesByTrack(track) {
             currentTplFilter = track;
@@ -2164,7 +2446,13 @@
                 return;
             }
 
-            container.innerHTML = filtered.map((tpl) => `
+            container.innerHTML = filtered.map((tpl) => {
+                const hasTimeMeta = tpl.durationMinutes || tpl.durationMode === 'strict_100';
+                const durLabel = tpl.durationMinutes ? luniteFormatMinutesLabel(tpl.durationMinutes) : '';
+                const timeBadgeText = hasTimeMeta
+                    ? `⏱️ ${durLabel || 'Auto'}${tpl.durationMode === 'strict_100' ? ' · 100%' : ''}`
+                    : '';
+                return `
                 <div class="template-card" id="tpl-card-${tpl.id}" onclick="applyTemplate('${tpl.id}', false)">
                     <div>
                         <div class="tpl-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -2181,6 +2469,7 @@
                             <span class="tpl-badge" style="color:#6ee7b7;">${escapeHtml(tpl.unitName || tpl.unitValue)}</span>
                             <span class="tpl-badge" style="color:#93c5fd;">${escapeHtml(tpl.jenisName || tpl.jenisValue)}</span>
                             <span class="tpl-badge" style="color:#c4b5fd;">${tpl.track === 'programmer' ? '💻 Dev' : tpl.track === 'it_support' ? '🛠️ Support' : '⚡ All'}</span>
+                            ${timeBadgeText ? `<span class="tpl-badge" style="color:#fcd34d;">${escapeHtml(timeBadgeText)}</span>` : ''}
                         </div>
                     </div>
                     <div class="tpl-actions">
@@ -2192,7 +2481,8 @@
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         function applyTemplate(tplId, autoSubmit = false) {
@@ -2212,7 +2502,22 @@
             syncFromNativeSelect('jenis');
 
             document.getElementById('textarea-komplain').value = tpl.text;
-            updateTimestamps();
+
+            // Apply template time & 100% precision settings
+            luniteActiveTemplateDurationMinutes = (tpl.durationMinutes && Number(tpl.durationMinutes) > 0)
+                ? Number(tpl.durationMinutes)
+                : null;
+            luniteActiveTemplateDurationMode = tpl.durationMode || null;
+            luniteSyncTemplateDurationBadge();
+
+            if (tpl.timestampAnchor === 'selesai' || tpl.timestampAnchor === 'terima') {
+                setTimestampAnchor(tpl.timestampAnchor);
+            } else {
+                updateTimestamps();
+                if (currentTimeMode === 'manual') {
+                    syncManualFromAuto();
+                }
+            }
 
             if (autoSubmit) {
                 submitToPortal(false);
@@ -2221,6 +2526,48 @@
 
         // 3.1 Custom Template Creator & Editor Modal Handlers
         let editingTemplateId = null;
+
+        function luniteOnTplDurationPresetChange(presetVal) {
+            const inputMins = document.getElementById('new-tpl-duration-minutes');
+            if (!inputMins) return;
+            if (presetVal === 'auto') {
+                inputMins.value = '';
+            } else if (presetVal !== 'custom') {
+                inputMins.value = presetVal;
+            } else {
+                inputMins.focus();
+            }
+        }
+
+        function luniteOnTplDurationMinutesInput(val) {
+            const presetEl = document.getElementById('new-tpl-duration-preset');
+            if (!presetEl) return;
+            const trimmed = String(val || '').trim();
+            if (!trimmed) {
+                presetEl.value = 'auto';
+                return;
+            }
+            const knownValues = ['30', '45', '60', '120', '1439', '5759'];
+            presetEl.value = knownValues.includes(trimmed) ? trimmed : 'custom';
+        }
+
+        function lunitePopulateTplDurationFields(tpl = null) {
+            const presetEl = document.getElementById('new-tpl-duration-preset');
+            const minsEl = document.getElementById('new-tpl-duration-minutes');
+            const modeEl = document.getElementById('new-tpl-duration-mode');
+            const anchorEl = document.getElementById('new-tpl-anchor');
+
+            const durVal = tpl && tpl.durationMinutes ? String(tpl.durationMinutes) : '';
+            if (minsEl) minsEl.value = durVal;
+            luniteOnTplDurationMinutesInput(durVal);
+
+            if (modeEl) {
+                modeEl.value = (tpl && tpl.durationMode) ? tpl.durationMode : 'strict_100';
+            }
+            if (anchorEl) {
+                anchorEl.value = (tpl && tpl.timestampAnchor) ? tpl.timestampAnchor : '';
+            }
+        }
 
         function openAddTemplateModal() {
             editingTemplateId = null;
@@ -2233,7 +2580,7 @@
 
             document.getElementById('new-tpl-title').value = '';
             document.getElementById('new-tpl-icon').value = currentTrack === 'programmer' ? '💻' : '🌐';
-            document.getElementById('new-tpl-track').value = 'both';
+            document.getElementById('new-tpl-track').value = currentTrack === 'it_support' ? 'it_support' : 'both';
 
             const tplUnitSelect = document.getElementById('select-tpl-unit');
             if (tplUnitSelect) {
@@ -2250,6 +2597,11 @@
             }
 
             document.getElementById('new-tpl-text').value = komplainText;
+            lunitePopulateTplDurationFields({
+                durationMinutes: luniteActiveTemplateDurationMinutes,
+                durationMode: 'strict_100',
+                timestampAnchor: ''
+            });
 
             document.getElementById('modal-add-template').style.display = 'flex';
         }
@@ -2293,6 +2645,7 @@
             }
 
             document.getElementById('new-tpl-text').value = tpl.text || '';
+            lunitePopulateTplDurationFields(tpl);
 
             document.getElementById('modal-add-template').style.display = 'flex';
         }
@@ -2353,6 +2706,10 @@
             }
 
             const text = document.getElementById('new-tpl-text').value;
+            const rawCustomMinutes = parseInt(document.getElementById('new-tpl-duration-minutes')?.value || '', 10);
+            const durationMinutes = Number.isFinite(rawCustomMinutes) && rawCustomMinutes > 0 ? rawCustomMinutes : null;
+            const durationMode = document.getElementById('new-tpl-duration-mode')?.value || 'strict_100';
+            const timestampAnchor = document.getElementById('new-tpl-anchor')?.value || null;
 
             const wasEditing = Boolean(editingTemplateId);
             const payload = {
@@ -2364,7 +2721,10 @@
                 unitName,
                 jenisValue,
                 jenisName,
-                text
+                text,
+                durationMinutes,
+                durationMode,
+                timestampAnchor
             };
 
             try {
@@ -2392,6 +2752,7 @@
             const unitSelect = document.getElementById('select-unit');
             const jenisSelect = document.getElementById('select-jenis');
             const petugasSelect = document.getElementById('select-petugas');
+            const dilanjutkanSelect = document.getElementById('select-dilanjutkan');
             const settingPetugasSelect = document.getElementById('setting-petugas');
             const tplUnitSelect = document.getElementById('select-tpl-unit');
             const tplJenisSelect = document.getElementById('select-tpl-jenis');
@@ -2423,6 +2784,9 @@
                     `<option value="${p.value}">${p.value} - ${p.text}</option>`
                 ).join('');
                 if (petugasSelect) petugasSelect.innerHTML = petugasHtml;
+                if (dilanjutkanSelect) {
+                    dilanjutkanSelect.innerHTML = `<option value="">-- Pilih Petugas --</option>` + petugasHtml;
+                }
                 if (settingPetugasSelect) settingPetugasSelect.innerHTML = petugasHtml;
                 const badgePetugas = document.getElementById('badge-petugas-count');
                 if (badgePetugas) badgePetugas.textContent = `${portalOptions.petugasOptions.length} Petugas Live`;
@@ -2432,11 +2796,13 @@
             syncFromNativeSelect('unit');
             syncFromNativeSelect('jenis');
             syncFromNativeSelect('petugas');
+            if (dilanjutkanSelect) syncFromNativeSelect('dilanjutkan');
             if (tplUnitSelect) syncFromNativeSelect('tpl-unit');
             if (tplJenisSelect) syncFromNativeSelect('tpl-jenis');
             renderSearchOptions('unit');
             renderSearchOptions('jenis');
             renderSearchOptions('petugas');
+            if (dilanjutkanSelect) renderSearchOptions('dilanjutkan');
             if (tplUnitSelect) renderSearchOptions('tpl-unit');
             if (tplJenisSelect) renderSearchOptions('tpl-jenis');
         }
@@ -2467,7 +2833,7 @@
         }
 
         function closeAllDropdowns() {
-            ['unit', 'jenis', 'petugas', 'tpl-unit', 'tpl-jenis'].forEach(t => {
+            ['unit', 'jenis', 'petugas', 'dilanjutkan', 'tpl-unit', 'tpl-jenis'].forEach(t => {
                 const dd = document.getElementById(`dropdown-${t}`);
                 const trigger = document.getElementById(`trigger-${t}`);
                 const wrapper = document.getElementById(`combobox-${t}`);
@@ -2508,7 +2874,7 @@
                     text: u.text,
                     label: `${u.value} - ${u.text}`
                 }));
-            } else if (type === 'petugas') {
+            } else if (type === 'petugas' || type === 'dilanjutkan') {
                 items = (portalOptions.petugasOptions || []).map(p => ({
                     value: p.value,
                     text: p.text,
@@ -2589,12 +2955,38 @@
                 if (type === 'unit' || type === 'tpl-unit') {
                     const found = (portalOptions.unitOptions || []).find(u => String(u.value) === String(select.value));
                     label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
-                } else if (type === 'petugas') {
+                } else if (type === 'petugas' || type === 'dilanjutkan') {
                     const found = (portalOptions.petugasOptions || []).find(p => String(p.value) === String(select.value));
                     label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
                 } else {
                     const found = (portalOptions.jenisAduanOptions || []).find(j => String(j.value) === String(select.value));
                     label.textContent = found ? `${found.value} - ${found.text}` : (opt ? opt.text : select.value);
+                }
+            } else if (type === 'dilanjutkan') {
+                label.textContent = '-- Pilih Petugas --';
+            }
+        }
+
+        function luniteOnStatusChange(statusVal) {
+            const isNotFinished = String(statusVal) === '2';
+            const wrapper = document.getElementById('combobox-dilanjutkan');
+            const badge = document.getElementById('badge-dilanjutkan-state');
+            const selectDil = document.getElementById('select-dilanjutkan');
+
+            if (wrapper) {
+                wrapper.style.opacity = isNotFinished ? '1' : '0.45';
+                wrapper.style.pointerEvents = isNotFinished ? 'auto' : 'none';
+            }
+            if (badge) {
+                badge.textContent = isNotFinished ? 'Aktif (Pilih Petugas)' : 'Terkunci (Selesai)';
+                badge.style.color = isNotFinished ? '#fda4af' : 'var(--text-sub)';
+            }
+            if (!isNotFinished) {
+                if (activeDropdown === 'dilanjutkan') closeAllDropdowns();
+                if (selectDil) {
+                    selectDil.value = '';
+                    syncFromNativeSelect('dilanjutkan');
+                    renderSearchOptions('dilanjutkan');
                 }
             }
         }
@@ -2678,7 +3070,26 @@
             }
         }
 
-        function lunar_onAiModeChange(val) {
+        /**
+         * Persist only AI preferences (aiMode, localModel, ollamaUrl) without resetting form fields or profiles.
+         */
+        async function luniteSaveAiPreferences() {
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appSettings)
+                });
+                const result = await res.json();
+                if (!result.success) {
+                    console.warn('[Lunar] Failed to save AI preferences:', result.error);
+                }
+            } catch (err) {
+                console.error('[Lunar] Error saving AI preferences:', err);
+            }
+        }
+
+        async function lunar_onAiModeChange(val) {
             appSettings.aiMode = val;
             const container = document.getElementById('container-local-model-select');
             if (container) {
@@ -2687,10 +3098,10 @@
             }
             const modalSelect = document.getElementById('setting-ai-mode');
             if (modalSelect) modalSelect.value = val;
-            saveSettings(false);
+            await luniteSaveAiPreferences();
         }
 
-        function lunar_onLocalModelChange(val) {
+        async function lunar_onLocalModelChange(val) {
             if (val === '__custom__') {
                 const customName = prompt('Ketikkan nama model Ollama (contoh: qwen2.5-coder:14b, deepseek-coder:6.7b, mistral:7b):');
                 if (customName && customName.trim()) {
@@ -2704,9 +3115,12 @@
                 }
             }
             appSettings.localModel = val;
+            const mainSelect = document.getElementById('select-local-model');
+            if (mainSelect) mainSelect.value = val;
             const modalSelect = document.getElementById('setting-local-model');
             if (modalSelect) modalSelect.value = val;
-            saveSettings(false);
+            await luniteSaveAiPreferences();
+            await lunar_refreshOllamaModels(false);
         }
 
         function lunar_addCustomModelOption(modelName) {
@@ -2940,6 +3354,9 @@
         }
 
         function getBaseDeltaMinutes(jenisVal) {
+            if (luniteActiveTemplateDurationMinutes && Number(luniteActiveTemplateDurationMinutes) > 0) {
+                return Number(luniteActiveTemplateDurationMinutes);
+            }
             if (jenisVal === '4') {
                 return 23 * 60 + 59; // 1439 mins (23h 59m)
             } else if (jenisVal === '5') {
@@ -3106,8 +3523,9 @@
 
             const baseMinutes = getBaseDeltaMinutes(jenisVal);
             let effectiveMinutes = baseMinutes;
+            const isStrict100 = luniteActiveTemplateDurationMode === 'strict_100';
 
-            if (isRandomDeltaActive) {
+            if (isRandomDeltaActive && !isStrict100) {
                 effectiveMinutes = Math.round(baseMinutes * currentRandomFactor);
             }
 
@@ -3131,7 +3549,9 @@
             if (hours > 0) parts.push(`${hours}h`);
             parts.push(`${mins}m`);
             let deltaLabel = parts.join(' ') + ' Delta';
-            if (isRandomDeltaActive) {
+            if (isStrict100) {
+                deltaLabel = `🎯 ${deltaLabel} (100%)`;
+            } else if (isRandomDeltaActive) {
                 const percent = Math.round(currentRandomFactor * 100);
                 deltaLabel = `🎲 ${deltaLabel} (${percent}%)`;
             }
@@ -3140,8 +3560,12 @@
                 const badge = document.getElementById('badge-duration');
                 if (badge) {
                     badge.textContent = deltaLabel;
-                    badge.style.background = isRandomDeltaActive ? 'rgba(244, 63, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)';
-                    badge.style.color = isRandomDeltaActive ? '#fda4af' : '#c4b5fd';
+                    badge.style.background = isStrict100
+                        ? 'rgba(16, 185, 129, 0.18)'
+                        : (isRandomDeltaActive ? 'rgba(244, 63, 94, 0.15)' : 'rgba(139, 92, 246, 0.15)');
+                    badge.style.color = isStrict100
+                        ? '#6ee7b7'
+                        : (isRandomDeltaActive ? '#fda4af' : '#c4b5fd');
                 }
                 const textSel = document.getElementById('text-penyelesaian');
                 const textPen = document.getElementById('text-penerimaan');
@@ -3742,6 +4166,20 @@
             handleSupportImage(file);
         }
 
+        function luniteHandleSupportFileList(fileList) {
+            if (!fileList || fileList.length === 0) return;
+            const imageFiles = Array.from(fileList).filter(f => f.type && f.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                alert('Silakan pilih file gambar (PNG, JPG, JPEG, WEBP).');
+                return;
+            }
+            if (imageFiles.length === 1) {
+                handleSupportImage(imageFiles[0]);
+            } else {
+                luniteQueueMultipleSupportFiles(imageFiles);
+            }
+        }
+
         function chooseAnotherSupportPhoto() {
             const fileInput = document.getElementById('file-upload');
             if (fileInput) {
@@ -3755,6 +4193,15 @@
             handleSupportImage(file);
         }
 
+        function luniteReadFileAsDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function handleSupportImage(file) {
             if (!file) return;
             if (!file.type || !file.type.startsWith('image/')) {
@@ -3763,82 +4210,176 @@
             }
 
             currentSupportImageName = file.name || 'screenshot.png';
+            const dataUrl = await luniteReadFileAsDataUrl(file);
+            currentSupportImageBase64 = dataUrl;
 
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const dataUrl = e.target.result;
-                currentSupportImageBase64 = dataUrl;
+            // Show preview
+            const previewImg = document.getElementById('support-preview-img');
+            const previewContainer = document.getElementById('support-preview-container');
+            const uploadContainer = document.getElementById('support-upload-container');
+            const btnChooseAnother = document.getElementById('btn-choose-another-support');
+            const btnReanalyze = document.getElementById('btn-reanalyze-support');
+            const btnClear = document.getElementById('btn-clear-support-img');
+            const badgeStatus = document.getElementById('badge-support-status');
+            const nameLabel = document.getElementById('support-img-name');
 
-                // Show preview
-                const previewImg = document.getElementById('support-preview-img');
-                const previewContainer = document.getElementById('support-preview-container');
-                const uploadContainer = document.getElementById('support-upload-container');
-                const btnChooseAnother = document.getElementById('btn-choose-another-support');
-                const btnReanalyze = document.getElementById('btn-reanalyze-support');
-                const btnClear = document.getElementById('btn-clear-support-img');
-                const badgeStatus = document.getElementById('badge-support-status');
-                const nameLabel = document.getElementById('support-img-name');
+            if (previewImg) previewImg.src = dataUrl;
+            if (previewContainer) previewContainer.style.display = 'flex';
+            if (uploadContainer) uploadContainer.style.display = 'none';
+            if (btnChooseAnother) btnChooseAnother.style.display = 'inline-block';
+            if (btnReanalyze) btnReanalyze.style.display = 'inline-block';
+            if (btnClear) btnClear.style.display = 'inline-block';
+            if (badgeStatus) badgeStatus.style.display = 'inline-flex';
+            if (nameLabel) nameLabel.textContent = currentSupportImageName;
 
-                if (previewImg) previewImg.src = dataUrl;
-                if (previewContainer) previewContainer.style.display = 'flex';
-                if (uploadContainer) uploadContainer.style.display = 'none';
-                if (btnChooseAnother) btnChooseAnother.style.display = 'inline-block';
-                if (btnReanalyze) btnReanalyze.style.display = 'inline-block';
-                if (btnClear) btnClear.style.display = 'inline-block';
-                if (badgeStatus) badgeStatus.style.display = 'inline-flex';
-                if (nameLabel) nameLabel.textContent = currentSupportImageName;
-
-                // Analyze with AI and put result into Isi Komplain
-                await analyzeCurrentImage(dataUrl, currentSupportImageName);
-            };
-            reader.readAsDataURL(file);
+            // Analyze with AI (fusing any pasted WA/chat context) and auto-fill form
+            await luniteAnalyzeSupportFusion(dataUrl, currentSupportImageName);
         }
 
-        async function analyzeCurrentImage(dataUrl, fileName) {
+        function luniteApplyExtractedFields(extracted) {
+            const summaryEl = document.getElementById('lunite-fusion-summary');
+            if (!extracted || typeof extracted !== 'object') {
+                if (summaryEl) summaryEl.style.display = 'none';
+                return;
+            }
+
+            const appliedLabels = [];
+
+            if (extracted.noRm && extracted.noRm !== '-') {
+                const rmInput = document.getElementById('input-norm');
+                if (rmInput) {
+                    rmInput.value = extracted.noRm;
+                    appliedLabels.push(`No. RM: ${extracted.noRm}`);
+                }
+            }
+
+            if (extracted.unitValue) {
+                const unitSel = document.getElementById('select-unit');
+                if (unitSel && Array.from(unitSel.options).some(o => o.value === String(extracted.unitValue))) {
+                    unitSel.value = String(extracted.unitValue);
+                    syncFromNativeSelect('unit');
+                    renderSearchOptions('unit');
+                    appliedLabels.push(`Unit: ${extracted.unitName || extracted.unitValue}`);
+                }
+            }
+
+            if (extracted.jenisAduanValue) {
+                const jenisSel = document.getElementById('select-jenis');
+                if (jenisSel && Array.from(jenisSel.options).some(o => o.value === String(extracted.jenisAduanValue))) {
+                    jenisSel.value = String(extracted.jenisAduanValue);
+                    syncFromNativeSelect('jenis');
+                    renderSearchOptions('jenis');
+                    luniteOnManualJenisChange();
+                    appliedLabels.push(`Jenis: ${extracted.jenisName || extracted.jenisAduanValue}`);
+                }
+            }
+
+            if (extracted.petugasValue) {
+                const petugasSel = document.getElementById('select-petugas');
+                if (petugasSel && Array.from(petugasSel.options).some(o => o.value === String(extracted.petugasValue))) {
+                    petugasSel.value = String(extracted.petugasValue);
+                    syncFromNativeSelect('petugas');
+                    renderSearchOptions('petugas');
+                    appliedLabels.push(`Petugas: ${extracted.petugasName || extracted.petugasValue}`);
+                }
+            }
+
+            if (extracted.namaPengadu) {
+                const namaInput = document.getElementById('input-nama');
+                if (namaInput) {
+                    namaInput.value = extracted.namaPengadu;
+                    appliedLabels.push(`Pelapor: ${extracted.namaPengadu}`);
+                }
+            }
+
+            if (summaryEl) {
+                if (appliedLabels.length > 0) {
+                    summaryEl.innerHTML = `✨ <b>Auto-Fill Terdeteksi:</b> ${appliedLabels.map(l => escapeHtml(l)).join(' • ')}`;
+                    summaryEl.style.display = 'block';
+                } else {
+                    summaryEl.style.display = 'none';
+                }
+            }
+        }
+
+        async function luniteRunSupportFusionRequest({ imageBase64 = null, imagePath = null, fileName = 'evidence_support.png', complaintContext = '', solutionHint = '' } = {}) {
+            const res = await fetch('/api/analyze-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    imageBase64,
+                    imagePath,
+                    fileName,
+                    role: 'it_support',
+                    unitValue: document.getElementById('select-unit').value,
+                    jenisAduanValue: document.getElementById('select-jenis').value,
+                    complaintContext,
+                    solutionHint,
+                    apiKey: appSettings.geminiApiKey || '',
+                    aiMode: appSettings.aiMode || 'gemini_fallback',
+                    localModel: appSettings.localModel || 'qwen2.5-coder:7b',
+                    ollamaUrl: appSettings.ollamaUrl || 'http://127.0.0.1:11434'
+                })
+            });
+            return await res.json();
+        }
+
+        async function luniteAnalyzeSupportFusion(overrideDataUrl = null, overrideFileName = null) {
+            const dataUrl = overrideDataUrl !== null ? overrideDataUrl : currentSupportImageBase64;
+            const fileName = overrideFileName || currentSupportImageName || 'evidence_support.png';
+            const complaintContext = (document.getElementById('lunite-support-chat-input')?.value || '').trim();
+            const solutionHint = (document.getElementById('lunite-support-solution-input')?.value || '').trim();
+
+            if (!dataUrl && !evidenceImagePath && !complaintContext) {
+                alert('Harap tempel Pesan Aduan (WA/Chat) atau unggah Screenshot bukti terlebih dahulu.');
+                return;
+            }
+
             const overlay = document.getElementById('support-analyzing-overlay');
             const aiBadge = document.getElementById('support-ai-badge');
+            const fusionBtn = document.getElementById('btn-analyze-support-fusion');
             const footerStatus = document.getElementById('footer-status');
 
-            if (overlay) overlay.style.display = 'flex';
+            if (overlay && dataUrl) overlay.style.display = 'flex';
+            if (fusionBtn) {
+                fusionBtn.disabled = true;
+                fusionBtn.textContent = '⏳ Menganalisis Gabungan...';
+            }
             if (aiBadge) {
                 aiBadge.style.color = 'var(--crimson-light)';
                 aiBadge.textContent = '⏳ Menganalisis...';
             }
-            if (footerStatus) footerStatus.textContent = '🔍 Menganalisis foto kendala IT...';
+            if (footerStatus) footerStatus.textContent = '🔍 Menyatukan pesan aduan & screenshot bukti...';
 
             try {
-                const res = await fetch('/api/analyze-image', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imageBase64: dataUrl,
-                        fileName: fileName || 'evidence_support.png',
-                        unitValue: document.getElementById('select-unit').value,
-                        jenisAduanValue: document.getElementById('select-jenis').value,
-                        apiKey: appSettings.geminiApiKey || '',
-                        aiMode: appSettings.aiMode || 'gemini_fallback',
-                        localModel: appSettings.localModel || 'qwen2.5-coder:7b',
-                        ollamaUrl: appSettings.ollamaUrl || 'http://127.0.0.1:11434'
-                    })
+                const data = await luniteRunSupportFusionRequest({
+                    imageBase64: dataUrl,
+                    imagePath: !dataUrl ? evidenceImagePath : null,
+                    fileName,
+                    complaintContext,
+                    solutionHint
                 });
-                const data = await res.json();
+
                 if (overlay) overlay.style.display = 'none';
 
                 if (data.success && data.analysis) {
                     document.getElementById('textarea-komplain').value = sanitizeLunaSignatureClient(data.analysis);
-                    evidenceImagePath = data.imagePath;
+                    if (data.imagePath) {
+                        evidenceImagePath = data.imagePath;
+                    }
+                    luniteApplyExtractedFields(data.extracted);
 
                     if (aiBadge) {
                         aiBadge.style.color = '#6ee7b7';
                         aiBadge.textContent = `✨ ${data.source || 'Lunar Vision'}`;
                     }
-                    if (footerStatus) footerStatus.textContent = '✅ Foto berhasil dianalisis & dimasukkan ke Isi Komplain!';
+                    if (footerStatus) footerStatus.textContent = `✅ Analisis Gabungan selesai (${data.source || 'AI'})!`;
                 } else {
                     if (aiBadge) {
                         aiBadge.style.color = '#fb7185';
                         aiBadge.textContent = '⚠️ Gagal menganalisis';
                     }
-                    if (footerStatus) footerStatus.textContent = '⚠️ Gagal menganalisis gambar: ' + (data.error || 'Unknown error');
+                    if (footerStatus) footerStatus.textContent = '⚠️ Gagal menganalisis: ' + (data.error || 'Unknown error');
                 }
             } catch (err) {
                 if (overlay) overlay.style.display = 'none';
@@ -3846,14 +4387,21 @@
                     aiBadge.style.color = '#fb7185';
                     aiBadge.textContent = '⚠️ Error koneksi';
                 }
-                console.error('[!] Error analyzing image:', err);
+                console.error('[!] Error in Smart Fusion analysis:', err);
+            } finally {
+                if (fusionBtn) {
+                    fusionBtn.disabled = false;
+                    fusionBtn.textContent = '✨ Analisis Gabungan (Pesan + Foto)';
+                }
             }
         }
 
+        async function analyzeCurrentImage(dataUrl, fileName) {
+            return luniteAnalyzeSupportFusion(dataUrl, fileName);
+        }
+
         function triggerAnalyzeSupportImage() {
-            if (currentSupportImageBase64) {
-                analyzeCurrentImage(currentSupportImageBase64, currentSupportImageName);
-            }
+            luniteAnalyzeSupportFusion(currentSupportImageBase64, currentSupportImageName);
         }
 
         function clearSupportImage() {
@@ -3909,7 +4457,7 @@
                     if (badgeStatus) badgeStatus.style.display = 'inline-flex';
                     if (nameLabel) nameLabel.textContent = data.fileName;
 
-                    await analyzeCurrentImage(data.imageBase64, data.fileName);
+                    await luniteAnalyzeSupportFusion(data.imageBase64, data.fileName);
                 } else {
                     alert('Tidak ditemukan screenshot baru dalam 30 menit terakhir di folder Pictures/Screenshots.');
                     if (footerStatus) footerStatus.textContent = 'Siap Mengisi Formulir';
@@ -3944,7 +4492,7 @@
                     const dt = e.dataTransfer;
                     const files = dt.files;
                     if (files && files.length > 0) {
-                        handleSupportImage(files[0]);
+                        luniteHandleSupportFileList(files);
                     }
                 }, false);
             }
@@ -4004,18 +4552,38 @@
             alert('Teks komplain berhasil disalin ke clipboard!');
         }
 
-        // 9. Submit to Si-Pangaduan
-        async function submitToPortal(clickSimpan = false) {
-            const modal = document.getElementById('modal-loading');
-            modal.style.display = 'flex';
-            document.getElementById('modal-title').textContent = clickSimpan ? 'Menyimpan ke Si-Pangaduan...' : 'Membuka Browser & Mengisi Formulir...';
-            document.getElementById('modal-desc').textContent = clickSimpan ? 'Menyimpan tiket dan konfirmasi ke Si-Pangaduan...' : 'Playwright sedang login ke portal dan mengisi seluruh kolom secara presisi...';
+        // ---------------------------------------------------------
+        // 8b. Staged Batch Queue Engine (Multiple Reports)
+        // ---------------------------------------------------------
+        const LUNITE_BATCH_STORAGE_KEY = 'lunite_batch_queue_v1';
+        let luniteBatchQueue = [];
+        let luniteEditingQueueIndex = null;
+        let luniteBatchReviewState = null;
 
-            const activeProf = getActiveProfile();
+        function luniteSaveBatchQueueToStorage() {
+            try {
+                localStorage.setItem(LUNITE_BATCH_STORAGE_KEY, JSON.stringify(luniteBatchQueue));
+            } catch (_) {}
+        }
 
+        function luniteLoadBatchQueue() {
+            try {
+                const raw = localStorage.getItem(LUNITE_BATCH_STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (Array.isArray(parsed)) {
+                        luniteBatchQueue = parsed;
+                    }
+                }
+            } catch (_) {
+                luniteBatchQueue = [];
+            }
+            luniteRenderBatchQueue();
+        }
+
+        function luniteGetActiveTimestampsForPayload() {
             let waktuPenerimaan = '';
             let waktuPenyelesaian = '';
-
             if (currentTimeMode === 'manual') {
                 const inputPen = document.getElementById('input-manual-penerimaan');
                 const inputSel = document.getElementById('input-manual-penyelesaian');
@@ -4029,21 +4597,443 @@
                 waktuPenerimaan = dateToPortalDateTimeString(autoPenerimaanDate);
                 waktuPenyelesaian = dateToPortalDateTimeString(autoPenyelesaianDate);
             }
+            return { waktuPenerimaan, waktuPenyelesaian };
+        }
 
-            let screenshotPathToSend = evidenceImagePath;
+        function luniteResolveCurrentScreenshotPath() {
             if (currentTrack === 'programmer') {
                 if (activeEvidenceTab === 'photo') {
-                    if (!progPhotoPath) {
-                        modal.style.display = 'none';
-                        alert('Anda memilih tab Upload Foto Manual, namun belum memilih/mengunggah foto bukti. Silakan unggah foto terlebih dahulu atau beralih ke tab Diff Card.');
-                        return;
-                    }
-                    screenshotPathToSend = progPhotoPath;
-                } else {
-                    screenshotPathToSend = diffCardPath || evidenceImagePath;
+                    return progPhotoPath || null;
                 }
+                return diffCardPath || evidenceImagePath || null;
+            }
+            return evidenceImagePath || null;
+        }
+
+        function luniteCollectCurrentFormTicket() {
+            const activeProf = getActiveProfile();
+            const unitVal = document.getElementById('select-unit')?.value || '44';
+            const jenisVal = document.getElementById('select-jenis')?.value || '4';
+            const petugasVal = document.getElementById('select-petugas')?.value || activeProf.petugasValue || activeProf.portalUsername || '01229';
+            const statusVal = document.getElementById('select-status')?.value || '1';
+            const dilanjutkanVal = statusVal === '2' ? (document.getElementById('select-dilanjutkan')?.value || '') : '';
+            const { waktuPenerimaan, waktuPenyelesaian } = luniteGetActiveTimestampsForPayload();
+
+            const unitOpt = (portalOptions.unitOptions || []).find(u => String(u.value) === String(unitVal));
+            const jenisOpt = (portalOptions.jenisAduanOptions || []).find(j => String(j.value) === String(jenisVal));
+            const dilOpt = (portalOptions.petugasOptions || []).find(p => String(p.value) === String(dilanjutkanVal));
+            const screenshotPath = luniteResolveCurrentScreenshotPath();
+            const isStrict100 = luniteActiveTemplateDurationMode === 'strict_100';
+
+            return {
+                id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                role: currentTrack,
+                namaPengadu: document.getElementById('input-nama')?.value || '',
+                petugasValue: petugasVal,
+                unitValue: unitVal,
+                unitName: unitOpt ? unitOpt.text : unitVal,
+                jenisAduanValue: jenisVal,
+                jenisName: jenisOpt ? jenisOpt.text : jenisVal,
+                statusValue: statusVal,
+                statusName: statusVal === '2' ? 'Tidak Selesai' : 'Selesai',
+                dilanjutkanValue: dilanjutkanVal,
+                dilanjutkanName: dilOpt ? dilOpt.text : dilanjutkanVal,
+                noRm: document.getElementById('input-norm')?.value || '-',
+                isiKomplain: document.getElementById('textarea-komplain')?.value || '',
+                complaintContext: document.getElementById('lunite-support-chat-input')?.value || '',
+                solutionHint: document.getElementById('lunite-support-solution-input')?.value || '',
+                screenshotPath,
+                screenshotFileName: screenshotPath ? screenshotPath.split(/[/\\]/).pop() : '',
+                repoPath: currentRepoPath,
+                waktuPenerimaan,
+                waktuPenyelesaian,
+                timestampAnchor: currentTimestampAnchor,
+                randomDelta: isStrict100 ? false : isRandomDeltaActive,
+                customDurationMinutes: luniteActiveTemplateDurationMinutes,
+                durationMode: luniteActiveTemplateDurationMode,
+                status: 'ready',
+                statusMessage: 'Siap'
+            };
+        }
+
+        function luniteAddOrUpdateQueueFromForm() {
+            if (currentTrack === 'programmer' && activeEvidenceTab === 'photo' && !progPhotoPath) {
+                alert('Anda memilih tab Upload Foto Manual, namun belum mengunggah foto bukti.');
+                return;
+            }
+            const item = luniteCollectCurrentFormTicket();
+            if (!item.isiKomplain.trim() && currentTrack === 'it_support') {
+                alert('Isi Komplain masih kosong. Silakan isi uraian atau jalankan Analisis Gabungan terlebih dahulu.');
+                return;
+            }
+            if (item.statusValue === '2' && !item.dilanjutkanValue) {
+                alert('Status dipilih "Tidak Selesai", silakan pilih petugas pada kolom "Di Lanjutkan" terlebih dahulu.');
+                return;
+            }
+
+            if (luniteEditingQueueIndex !== null && luniteBatchQueue[luniteEditingQueueIndex]) {
+                item.id = luniteBatchQueue[luniteEditingQueueIndex].id;
+                luniteBatchQueue[luniteEditingQueueIndex] = item;
+                document.getElementById('footer-status').textContent = `✅ Perubahan Antrean #${luniteEditingQueueIndex + 1} disimpan!`;
+                luniteEditingQueueIndex = null;
             } else {
-                screenshotPathToSend = evidenceImagePath;
+                luniteBatchQueue.push(item);
+                document.getElementById('footer-status').textContent = `➕ Ditambahkan ke Antrean Batch (${luniteBatchQueue.length} laporan)!`;
+            }
+
+            luniteSyncAddQueueButtonLabel();
+            luniteSaveBatchQueueToStorage();
+            luniteRenderBatchQueue();
+        }
+
+        function luniteSyncAddQueueButtonLabel() {
+            const btn = document.getElementById('btn-lunite-add-queue');
+            if (!btn) return;
+            if (luniteEditingQueueIndex !== null) {
+                btn.innerHTML = `💾 Simpan Antrean #${luniteEditingQueueIndex + 1}`;
+                btn.style.background = 'rgba(225, 29, 72, 0.28)';
+                btn.style.color = '#fda4af';
+            } else {
+                btn.innerHTML = '➕ Tambah ke Antrean';
+                btn.style.background = 'rgba(139, 92, 246, 0.22)';
+                btn.style.color = '#ddd6fe';
+            }
+        }
+
+        async function luniteQueueMultipleSupportFiles(files) {
+            const modal = document.getElementById('modal-loading');
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').textContent = `Memproses ${files.length} Foto ke Antrean...`;
+
+            const sharedContext = (document.getElementById('lunite-support-chat-input')?.value || '').trim();
+            const sharedSolution = (document.getElementById('lunite-support-solution-input')?.value || '').trim();
+            const activeProf = getActiveProfile();
+
+            let addedCount = 0;
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                document.getElementById('modal-desc').textContent = `Menganalisis foto ${i + 1} / ${files.length}: ${file.name}...`;
+                try {
+                    const dataUrl = await luniteReadFileAsDataUrl(file);
+                    const data = await luniteRunSupportFusionRequest({
+                        imageBase64: dataUrl,
+                        fileName: file.name || `support_${i + 1}.png`,
+                        complaintContext: sharedContext,
+                        solutionHint: sharedSolution
+                    });
+
+                    const extracted = data.extracted || {};
+                    const unitVal = extracted.unitValue || document.getElementById('select-unit')?.value || '44';
+                    const jenisVal = extracted.jenisAduanValue || document.getElementById('select-jenis')?.value || '1';
+                    const petugasVal = extracted.petugasValue || document.getElementById('select-petugas')?.value || activeProf.petugasValue || '01229';
+                    const unitOpt = (portalOptions.unitOptions || []).find(u => String(u.value) === String(unitVal));
+                    const jenisOpt = (portalOptions.jenisAduanOptions || []).find(j => String(j.value) === String(jenisVal));
+                    const { waktuPenerimaan, waktuPenyelesaian } = luniteGetActiveTimestampsForPayload();
+
+                    luniteBatchQueue.push({
+                        id: 'q_' + Date.now() + '_' + i,
+                        role: 'it_support',
+                        namaPengadu: extracted.namaPengadu || document.getElementById('input-nama')?.value || '',
+                        petugasValue: petugasVal,
+                        unitValue: unitVal,
+                        unitName: unitOpt ? unitOpt.text : (extracted.unitName || unitVal),
+                        jenisAduanValue: jenisVal,
+                        jenisName: jenisOpt ? jenisOpt.text : (extracted.jenisName || jenisVal),
+                        noRm: extracted.noRm || '-',
+                        isiKomplain: sanitizeLunaSignatureClient(data.analysis || ''),
+                        complaintContext: sharedContext,
+                        solutionHint: sharedSolution,
+                        screenshotPath: data.imagePath || null,
+                        screenshotFileName: data.imagePath ? data.imagePath.split(/[/\\]/).pop() : file.name,
+                        repoPath: currentRepoPath,
+                        waktuPenerimaan,
+                        waktuPenyelesaian,
+                        timestampAnchor: currentTimestampAnchor,
+                        randomDelta: luniteActiveTemplateDurationMode === 'strict_100' ? false : isRandomDeltaActive,
+                        customDurationMinutes: luniteActiveTemplateDurationMinutes,
+                        durationMode: luniteActiveTemplateDurationMode,
+                        status: 'ready',
+                        statusMessage: 'Siap'
+                    });
+                    addedCount++;
+                } catch (err) {
+                    console.error('[!] Failed queueing file:', file.name, err);
+                }
+            }
+
+            modal.style.display = 'none';
+            luniteSaveBatchQueueToStorage();
+            luniteRenderBatchQueue();
+            document.getElementById('footer-status').textContent = `✅ ${addedCount} foto berhasil dianalisis & ditambahkan ke Antrean Batch!`;
+        }
+
+        function luniteRenderBatchQueue() {
+            const panel = document.getElementById('lunite-batch-queue-panel');
+            const listEl = document.getElementById('lunite-queue-list');
+            const countEl = document.getElementById('lunite-queue-count');
+            if (!panel || !listEl || !countEl) return;
+
+            if (!luniteBatchQueue.length) {
+                panel.style.display = 'none';
+                countEl.textContent = '0 Laporan';
+                listEl.innerHTML = '';
+                return;
+            }
+
+            panel.style.display = 'flex';
+            countEl.textContent = `${luniteBatchQueue.length} Laporan`;
+
+            listEl.innerHTML = luniteBatchQueue.map((item, idx) => {
+                const isEditing = luniteEditingQueueIndex === idx;
+                const thumbUrl = item.screenshotFileName
+                    ? (item.role === 'programmer' && !item.screenshotPath?.includes('evidence')
+                        ? `/api/diff-evidence-image?repoPath=${encodeURIComponent(item.repoPath || currentRepoPath)}&t=${idx}`
+                        : `/api/evidence-preview?file=${encodeURIComponent(item.screenshotFileName)}`)
+                    : '';
+                const statusColor = item.status === 'sent'
+                    ? '#6ee7b7'
+                    : item.status === 'error'
+                        ? '#fb7185'
+                        : '#c4b5fd';
+                const statusBg = item.status === 'sent'
+                    ? 'rgba(16,185,129,0.18)'
+                    : item.status === 'error'
+                        ? 'rgba(244,63,94,0.18)'
+                        : 'rgba(139,92,246,0.18)';
+
+                return `
+                    <div class="lunite-queue-card ${isEditing ? 'editing' : ''}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <span style="font-weight:800; font-size:12px; color:#fda4af;">#${idx + 1}</span>
+                                <span class="tpl-badge" style="color:#c4b5fd;">${item.role === 'programmer' ? '💻 Dev' : '🛠️ Support'}</span>
+                                <span class="tpl-badge" style="color:${statusColor}; background:${statusBg};">${escapeHtml(item.statusMessage || 'Siap')}</span>
+                            </div>
+                            <div style="display:flex; gap:4px;">
+                                <button type="button" class="btn-icon-subtle" title="Muat ke Form untuk Edit" onclick="luniteLoadQueueItemToForm(${idx})">✏️</button>
+                                <button type="button" class="btn-icon-subtle" title="Duplikat Laporan" onclick="luniteDuplicateQueueItem(${idx})">📋</button>
+                                <button type="button" class="btn-icon-subtle" title="Hapus dari Antrean" onclick="luniteRemoveQueueItem(${idx})">🗑️</button>
+                            </div>
+                        </div>
+
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            ${thumbUrl ? `<img class="lunite-queue-thumb" src="${thumbUrl}" alt="Bukti #${idx + 1}" onerror="this.style.display='none'">` : ''}
+                            <div style="min-width:0; flex:1; display:flex; flex-direction:column; gap:4px;">
+                                <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                    <span class="tpl-badge" style="color:#6ee7b7;">🏥 ${escapeHtml(item.unitName || item.unitValue)}</span>
+                                    <span class="tpl-badge" style="color:#93c5fd;">📌 ${escapeHtml(item.jenisName || item.jenisAduanValue)}</span>
+                                    ${item.statusValue === '2' ? `<span class="tpl-badge" style="color:#fda4af;">⏳ Tidak Selesai${item.dilanjutkanName ? ` ➔ ${escapeHtml(item.dilanjutkanName)}` : ''}</span>` : ''}
+                                    ${item.noRm && item.noRm !== '-' ? `<span class="tpl-badge" style="color:#fcd34d;">RM: ${escapeHtml(item.noRm)}</span>` : ''}
+                                </div>
+                                <div style="font-size:11.5px; color:var(--text-main); line-height:1.4; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                                    ${escapeHtml(item.isiKomplain || '(Tanpa uraian)')}
+                                </div>
+                                <div style="font-size:10px; font-family:'JetBrains Mono',monospace; color:var(--text-sub);">
+                                    ⏱️ ${escapeHtml(item.waktuPenerimaan || '-')} ➔ ${escapeHtml(item.waktuPenyelesaian || '-')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function luniteLoadQueueItemToForm(index) {
+            const item = luniteBatchQueue[index];
+            if (!item) return;
+
+            luniteEditingQueueIndex = index;
+            if (item.role !== currentTrack) {
+                switchTrack(item.role);
+            }
+
+            document.getElementById('input-nama').value = item.namaPengadu || '';
+            document.getElementById('select-petugas').value = item.petugasValue || '01229';
+            syncFromNativeSelect('petugas');
+
+            document.getElementById('select-unit').value = item.unitValue || '44';
+            syncFromNativeSelect('unit');
+
+            document.getElementById('select-jenis').value = item.jenisAduanValue || '4';
+            syncFromNativeSelect('jenis');
+
+            const statusSel = document.getElementById('select-status');
+            if (statusSel) {
+                statusSel.value = item.statusValue || '1';
+                luniteOnStatusChange(statusSel.value);
+            }
+            const dilSel = document.getElementById('select-dilanjutkan');
+            if (dilSel) {
+                dilSel.value = (item.statusValue === '2' && item.dilanjutkanValue) ? item.dilanjutkanValue : '';
+                syncFromNativeSelect('dilanjutkan');
+                renderSearchOptions('dilanjutkan');
+            }
+
+            document.getElementById('input-norm').value = item.noRm || '-';
+            document.getElementById('textarea-komplain').value = item.isiKomplain || '';
+
+            const chatEl = document.getElementById('lunite-support-chat-input');
+            if (chatEl) chatEl.value = item.complaintContext || '';
+            const solEl = document.getElementById('lunite-support-solution-input');
+            if (solEl) solEl.value = item.solutionHint || '';
+
+            luniteActiveTemplateDurationMinutes = item.customDurationMinutes || null;
+            luniteActiveTemplateDurationMode = item.durationMode || null;
+            luniteSyncTemplateDurationBadge();
+
+            if (item.waktuPenerimaan && item.waktuPenyelesaian) {
+                setTimeMode('manual');
+                const penInput = document.getElementById('input-manual-penerimaan');
+                const selInput = document.getElementById('input-manual-penyelesaian');
+                if (penInput) penInput.value = item.waktuPenerimaan.replace('  ', 'T');
+                if (selInput) selInput.value = item.waktuPenyelesaian.replace('  ', 'T');
+                onManualTimestampChange();
+            }
+
+            evidenceImagePath = item.screenshotPath || null;
+            if (item.role === 'it_support' && item.screenshotFileName) {
+                const previewUrl = `/api/evidence-preview?file=${encodeURIComponent(item.screenshotFileName)}`;
+                const previewImg = document.getElementById('support-preview-img');
+                const previewContainer = document.getElementById('support-preview-container');
+                const uploadContainer = document.getElementById('support-upload-container');
+                const nameLabel = document.getElementById('support-img-name');
+                if (previewImg) previewImg.src = previewUrl;
+                if (previewContainer) previewContainer.style.display = 'flex';
+                if (uploadContainer) uploadContainer.style.display = 'none';
+                if (nameLabel) nameLabel.textContent = item.screenshotFileName;
+                ['btn-choose-another-support', 'btn-reanalyze-support', 'btn-clear-support-img'].forEach(id => {
+                    const b = document.getElementById(id);
+                    if (b) b.style.display = 'inline-block';
+                });
+                const badgeStatus = document.getElementById('badge-support-status');
+                if (badgeStatus) badgeStatus.style.display = 'inline-flex';
+            }
+
+            luniteSyncAddQueueButtonLabel();
+            luniteRenderBatchQueue();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function luniteDuplicateQueueItem(index) {
+            const item = luniteBatchQueue[index];
+            if (!item) return;
+            const clone = {
+                ...item,
+                id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                status: 'ready',
+                statusMessage: 'Siap'
+            };
+            luniteBatchQueue.splice(index + 1, 0, clone);
+            luniteSaveBatchQueueToStorage();
+            luniteRenderBatchQueue();
+        }
+
+        function luniteRemoveQueueItem(index) {
+            luniteBatchQueue.splice(index, 1);
+            if (luniteEditingQueueIndex === index) {
+                luniteEditingQueueIndex = null;
+                luniteSyncAddQueueButtonLabel();
+            } else if (luniteEditingQueueIndex !== null && luniteEditingQueueIndex > index) {
+                luniteEditingQueueIndex--;
+                luniteSyncAddQueueButtonLabel();
+            }
+            luniteSaveBatchQueueToStorage();
+            luniteRenderBatchQueue();
+        }
+
+        function luniteClearBatchQueue() {
+            if (!luniteBatchQueue.length) return;
+            if (!confirm(`Kosongkan seluruh ${luniteBatchQueue.length} laporan di antrean?`)) return;
+            luniteBatchQueue = [];
+            luniteEditingQueueIndex = null;
+            luniteSyncAddQueueButtonLabel();
+            luniteSaveBatchQueueToStorage();
+            luniteRenderBatchQueue();
+        }
+
+        async function luniteSubmitBatchQueue(clickSimpan = false) {
+            if (!luniteBatchQueue.length) {
+                alert('Antrean laporan masih kosong.');
+                return;
+            }
+
+            const modal = document.getElementById('modal-loading');
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').textContent = clickSimpan
+                ? `Mengirim ${luniteBatchQueue.length} Laporan (1x Login)...`
+                : `Menyiapkan Preview ${luniteBatchQueue.length} Laporan...`;
+            document.getElementById('modal-desc').textContent = clickSimpan
+                ? 'Playwright login sekali dan mengirim semua tiket antrean secara berurutan...'
+                : 'Playwright login sekali dan memotret seluruh formulir terisi untuk diperiksa...';
+
+            const activeProf = getActiveProfile();
+            const itemsPayload = luniteBatchQueue.map((item, idx) => ({
+                ...item,
+                title: `Laporan #${idx + 1} (${item.unitName || item.unitValue})`,
+                portalUsername: activeProf.portalUsername || '01229',
+                portalPassword: activeProf.portalPassword || '123456'
+            }));
+
+            try {
+                const res = await fetch('/api/submit-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        items: itemsPayload,
+                        clickSimpan,
+                        portalUsername: activeProf.portalUsername || '01229',
+                        portalPassword: activeProf.portalPassword || '123456'
+                    })
+                });
+                const result = await res.json();
+                modal.style.display = 'none';
+
+                if (result.batchReviewMode && Array.isArray(result.previews)) {
+                    luniteOpenBatchReviewModal(result.previews);
+                    document.getElementById('footer-status').textContent = `🔍 Preview ${result.previews.length} laporan batch siap diperiksa!`;
+                } else if (Array.isArray(result.results)) {
+                    result.results.forEach((r) => {
+                        if (luniteBatchQueue[r.index]) {
+                            luniteBatchQueue[r.index].status = r.success ? 'sent' : 'error';
+                            luniteBatchQueue[r.index].statusMessage = r.success ? '✅ Terkirim' : '❌ Gagal';
+                        }
+                    });
+                    luniteSaveBatchQueueToStorage();
+                    luniteRenderBatchQueue();
+                    document.getElementById('footer-status').textContent = result.message || 'Batch selesai diproses.';
+                    alert(`🎉 ${result.message || 'Batch selesai!'}`);
+                } else if (!result.success) {
+                    alert('Gagal memproses batch: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                modal.style.display = 'none';
+                alert('Terjadi kesalahan saat memproses batch: ' + err.message);
+            }
+        }
+
+        // 9. Submit to Si-Pangaduan (Single Report)
+        async function submitToPortal(clickSimpan = false) {
+            const modal = document.getElementById('modal-loading');
+            modal.style.display = 'flex';
+            document.getElementById('modal-title').textContent = clickSimpan ? 'Menyimpan ke Si-Pangaduan...' : 'Membuka Browser & Mengisi Formulir...';
+            document.getElementById('modal-desc').textContent = clickSimpan ? 'Menyimpan tiket dan konfirmasi ke Si-Pangaduan...' : 'Playwright sedang login ke portal dan mengisi seluruh kolom secara presisi...';
+
+            const activeProf = getActiveProfile();
+            const { waktuPenerimaan, waktuPenyelesaian } = luniteGetActiveTimestampsForPayload();
+
+            let screenshotPathToSend = luniteResolveCurrentScreenshotPath();
+            if (currentTrack === 'programmer' && activeEvidenceTab === 'photo' && !progPhotoPath) {
+                modal.style.display = 'none';
+                alert('Anda memilih tab Upload Foto Manual, namun belum memilih/mengunggah foto bukti. Silakan unggah foto terlebih dahulu atau beralih ke tab Diff Card.');
+                return;
+            }
+
+            const statusVal = document.getElementById('select-status')?.value || '1';
+            const dilanjutkanVal = statusVal === '2' ? (document.getElementById('select-dilanjutkan')?.value || '') : '';
+            if (statusVal === '2' && !dilanjutkanVal) {
+                modal.style.display = 'none';
+                alert('Status dipilih "Tidak Selesai", silakan pilih petugas pada kolom "Di Lanjutkan" terlebih dahulu.');
+                return;
             }
 
             const payload = {
@@ -4052,6 +5042,8 @@
                 petugasValue: document.getElementById('select-petugas')?.value || activeProf.petugasValue || activeProf.portalUsername || '01229',
                 unitValue: document.getElementById('select-unit').value,
                 jenisAduanValue: document.getElementById('select-jenis').value,
+                statusValue: statusVal,
+                dilanjutkanValue: dilanjutkanVal,
                 noRm: document.getElementById('input-norm').value,
                 isiKomplain: document.getElementById('textarea-komplain').value,
                 screenshotPath: screenshotPathToSend,
@@ -4062,7 +5054,8 @@
                 waktuPenerimaan,
                 waktuPenyelesaian,
                 timestampAnchor: currentTimestampAnchor,
-                randomDelta: isRandomDeltaActive
+                randomDelta: luniteActiveTemplateDurationMode === 'strict_100' ? false : isRandomDeltaActive,
+                customDurationMinutes: luniteActiveTemplateDurationMinutes
             };
 
             try {
@@ -4093,7 +5086,7 @@
             }
         }
 
-        // 9b. Remote Review Modal Handlers
+        // 9b. Remote Review Modal Handlers (Single & Batch)
         let isReviewZoomed = false;
 
         function toggleReviewZoom() {
@@ -4113,11 +5106,43 @@
             }
         }
 
+        function luniteRenderReviewMetaBadges(meta) {
+            const badgesContainer = document.getElementById('review-meta-badges');
+            if (!badgesContainer || !meta) return;
+
+            const unitOpt = (portalOptions.unitOptions || []).find(u => String(u.value) === String(meta.unitValue));
+            const jenisOpt = (portalOptions.jenisAduanOptions || []).find(j => String(j.value) === String(meta.jenisAduanValue));
+            const petugasOpt = (portalOptions.petugasOptions || []).find(p => String(p.value) === String(meta.petugasValue));
+            const dilOpt = (portalOptions.petugasOptions || []).find(p => String(p.value) === String(meta.dilanjutkanValue));
+            const unitText = unitOpt ? `${unitOpt.value} - ${unitOpt.text}` : (meta.unitValue || '-');
+            const jenisText = jenisOpt ? `${jenisOpt.value} - ${jenisOpt.text}` : (meta.jenisAduanValue || '-');
+            const petugasText = petugasOpt ? petugasOpt.text : (meta.petugasValue || '-');
+            const isNotFinished = String(meta.statusValue || '1') === '2';
+            const statusText = isNotFinished
+                ? `⏳ Tidak Selesai${dilOpt ? ` ➔ ${dilOpt.text}` : (meta.dilanjutkanValue ? ` ➔ ${meta.dilanjutkanValue}` : '')}`
+                : '✅ Selesai';
+
+            badgesContainer.innerHTML = `
+                <span class="badge" style="background:rgba(225,29,72,0.15); color:#fda4af; padding:4px 10px; border-radius:20px;">👤 Pelapor: ${escapeHtml(meta.namaPengadu || '-')}</span>
+                <span class="badge" style="background:rgba(59,130,246,0.15); color:#93c5fd; padding:4px 10px; border-radius:20px;">🛠️ Yang Mengerjakan: ${escapeHtml(petugasText)}</span>
+                <span class="badge" style="background:rgba(168,85,247,0.15); color:#d8b4fe; padding:4px 10px; border-radius:20px;">🏥 ${escapeHtml(unitText)}</span>
+                <span class="badge" style="background:rgba(234,179,8,0.15); color:#fde047; padding:4px 10px; border-radius:20px;">📌 ${escapeHtml(jenisText)}</span>
+                <span class="badge" style="background:${isNotFinished ? 'rgba(244,63,94,0.18)' : 'rgba(16,185,129,0.15)'}; color:${isNotFinished ? '#fda4af' : '#6ee7b7'}; padding:4px 10px; border-radius:20px;">${escapeHtml(statusText)}</span>
+                ${meta.noRm && meta.noRm !== '-' ? `<span class="badge" style="background:rgba(245,158,11,0.15); color:#fcd34d; padding:4px 10px; border-radius:20px;">🪪 RM: ${escapeHtml(meta.noRm)}</span>` : ''}
+                <span class="badge" style="background:rgba(16,185,129,0.15); color:#6ee7b7; padding:4px 10px; border-radius:20px;">⏱️ ${escapeHtml(meta.waktuPenerimaan || '')} ➔ ${escapeHtml(meta.waktuPenyelesaian || '')}</span>
+            `;
+        }
+
         function openRemoteReviewModal(result) {
+            luniteBatchReviewState = null;
+            const batchBar = document.getElementById('lunite-batch-review-bar');
+            if (batchBar) batchBar.style.display = 'none';
+            const confirmBtn = document.getElementById('btn-confirm-remote-review');
+            if (confirmBtn) confirmBtn.innerHTML = '🚀 Konfirmasi & Simpan Sekarang';
+
             const modal = document.getElementById('modal-remote-review');
             const img = document.getElementById('review-screenshot-img');
             const fullLink = document.getElementById('review-full-link');
-            const badgesContainer = document.getElementById('review-meta-badges');
             const btnZoom = document.getElementById('btn-toggle-zoom');
 
             isReviewZoomed = false;
@@ -4134,25 +5159,61 @@
                 fullLink.href = result.screenshotBase64;
             }
 
-            if (result.meta) {
-                const unitText = document.getElementById('select-unit')?.selectedOptions?.[0]?.text || result.meta.unitValue || '-';
-                const jenisText = document.getElementById('select-jenis')?.selectedOptions?.[0]?.text || result.meta.jenisAduanValue || '-';
-
-                badgesContainer.innerHTML = `
-                    <span class="badge" style="background:rgba(225,29,72,0.15); color:#fda4af; border:1px solid rgba(225,29,72,0.3); padding:4px 10px; border-radius:20px;">👤 Pelapor: ${escapeHtml(result.meta.namaPengadu || '-')}</span>
-                    <span class="badge" style="background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); padding:4px 10px; border-radius:20px;">🛠️ Petugas: ${escapeHtml(result.meta.petugasValue || '-')}</span>
-                    <span class="badge" style="background:rgba(168,85,247,0.15); color:#d8b4fe; border:1px solid rgba(168,85,247,0.3); padding:4px 10px; border-radius:20px;">🏥 ${escapeHtml(unitText)}</span>
-                    <span class="badge" style="background:rgba(234,179,8,0.15); color:#fde047; border:1px solid rgba(234,179,8,0.3); padding:4px 10px; border-radius:20px;">📌 ${escapeHtml(jenisText)}</span>
-                    <span class="badge" style="background:rgba(16,185,129,0.15); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); padding:4px 10px; border-radius:20px;">⏱️ ${escapeHtml(result.meta.waktuPenerimaan || '')} ➔ ${escapeHtml(result.meta.waktuPenyelesaian || '')}</span>
-                `;
-            }
-
+            luniteRenderReviewMetaBadges(result.meta);
             modal.style.display = 'flex';
+        }
+
+        function luniteOpenBatchReviewModal(previews) {
+            if (!Array.isArray(previews) || !previews.length) return;
+            luniteBatchReviewState = { previews, activeIndex: 0 };
+            const batchBar = document.getElementById('lunite-batch-review-bar');
+            if (batchBar) batchBar.style.display = 'flex';
+            const confirmBtn = document.getElementById('btn-confirm-remote-review');
+            if (confirmBtn) confirmBtn.innerHTML = `🚀 Konfirmasi & Simpan Semua (${previews.length})`;
+
+            luniteShowBatchReviewIndex(0);
+            document.getElementById('modal-remote-review').style.display = 'flex';
+        }
+
+        function luniteShowBatchReviewIndex(idx) {
+            if (!luniteBatchReviewState || !luniteBatchReviewState.previews.length) return;
+            const total = luniteBatchReviewState.previews.length;
+            const safeIdx = Math.max(0, Math.min(total - 1, idx));
+            luniteBatchReviewState.activeIndex = safeIdx;
+
+            const current = luniteBatchReviewState.previews[safeIdx];
+            const img = document.getElementById('review-screenshot-img');
+            const fullLink = document.getElementById('review-full-link');
+            const counter = document.getElementById('lunite-batch-review-counter');
+            const pills = document.getElementById('lunite-batch-review-pills');
+
+            if (img && current.screenshotBase64) {
+                img.src = current.screenshotBase64;
+                fullLink.href = current.screenshotBase64;
+            }
+            if (counter) {
+                counter.textContent = `Laporan ${safeIdx + 1} / ${total}`;
+            }
+            if (pills) {
+                pills.innerHTML = luniteBatchReviewState.previews.map((p, i) => `
+                    <button type="button" class="btn-mini ${i === safeIdx ? 'btn-mini-primary' : 'btn-mini-secondary'}"
+                        style="padding:3px 9px; font-size:10.5px;" onclick="luniteShowBatchReviewIndex(${i})">
+                        #${i + 1}
+                    </button>
+                `).join('');
+            }
+            luniteRenderReviewMetaBadges(current.meta);
+        }
+
+        function luniteNavigateBatchReview(delta) {
+            if (!luniteBatchReviewState) return;
+            luniteShowBatchReviewIndex(luniteBatchReviewState.activeIndex + delta);
         }
 
         async function cancelRemoteReview() {
             const modal = document.getElementById('modal-remote-review');
             modal.style.display = 'none';
+            luniteBatchReviewState = null;
             try {
                 await fetch('/api/cancel-review', { method: 'POST' });
             } catch (_) {}
@@ -4163,19 +5224,36 @@
             const confirmBtn = document.getElementById('btn-confirm-remote-review');
             const cancelBtn = document.getElementById('btn-cancel-remote-review');
             const originalText = confirmBtn.innerHTML;
+            const isBatch = Boolean(luniteBatchReviewState);
 
             confirmBtn.disabled = true;
             cancelBtn.disabled = true;
-            confirmBtn.innerHTML = '⏳ Menyimpan ke Si-Pangaduan...';
+            confirmBtn.innerHTML = isBatch
+                ? `⏳ Menyimpan ${luniteBatchReviewState.previews.length} Laporan...`
+                : '⏳ Menyimpan ke Si-Pangaduan...';
 
             try {
-                const res = await fetch('/api/confirm-review-submit', {
+                const endpoint = isBatch ? '/api/confirm-batch-submit' : '/api/confirm-review-submit';
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
                 const result = await res.json();
 
-                if (result.success) {
+                if (isBatch && Array.isArray(result.results)) {
+                    result.results.forEach((r) => {
+                        if (luniteBatchQueue[r.index]) {
+                            luniteBatchQueue[r.index].status = r.success ? 'sent' : 'error';
+                            luniteBatchQueue[r.index].statusMessage = r.success ? '✅ Terkirim' : '❌ Gagal';
+                        }
+                    });
+                    luniteSaveBatchQueueToStorage();
+                    luniteRenderBatchQueue();
+                    document.getElementById('modal-remote-review').style.display = 'none';
+                    luniteBatchReviewState = null;
+                    document.getElementById('footer-status').textContent = result.message || '✅ Batch berhasil disimpan!';
+                    alert(`🎉 ${result.message || 'Semua laporan batch berhasil disimpan!'}`);
+                } else if (result.success) {
                     document.getElementById('modal-remote-review').style.display = 'none';
                     document.getElementById('footer-status').textContent = '✅ Formulir Berhasil Disimpan!';
                     alert('🎉 Sukses! Formulir Si-Pangaduan telah berhasil disimpan secara remote.');

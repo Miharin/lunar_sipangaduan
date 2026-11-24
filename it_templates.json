@@ -74,7 +74,24 @@
     "unitName": "Inst. Rekam Medik",
     "jenisValue": "7",
     "jenisName": "Perbaikan Hardware dan OS",
-    "text": "Penggantian cartridge toner laserjet yang hasil cetaknya pudar/bergaris di bagian administrasi rekam medik. Dilakukan kalibrasi drum dan cetak lembar uji coba dengan hasil cetak jelas dan pekat."
+    "text": "Penggantian cartridge toner laserjet yang hasil cetaknya pudar/bergaris di bagian administrasi rekam medik. Dilakukan kalibrasi drum dan cetak lembar uji coba dengan hasil cetak jelas dan pekat.",
+    "durationMinutes": 45,
+    "durationMode": "strict_100",
+    "timestampAnchor": null
+  },
+  {
+    "id": "edit_surat_mrs",
+    "icon": "🏥",
+    "title": "Perbaikan / Edit Diagnosa Surat MRS",
+    "track": "it_support",
+    "unitValue": "88",
+    "unitName": "Pav. Dahlia",
+    "jenisValue": "1",
+    "jenisName": "Penanganan Komplain",
+    "text": "Penanganan komplain permintaan perbaikan/edit diagnosa pada Surat Masuk Rumah Sakit (MRS) pasien yang sudah terlayani dan berpindah ke ruang rawat inap. Dilakukan pengecekan data registrasi pasien, pembukaan/penyesuaian akses ubah diagnosa MRS di modul SIMRS, serta verifikasi cetak ulang surat MRS telah sesuai.",
+    "durationMinutes": 60,
+    "durationMode": "strict_100",
+    "timestampAnchor": "selesai"
   },
   {
     "id": "pc_lemot",

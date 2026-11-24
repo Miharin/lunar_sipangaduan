@@ -244,6 +244,8 @@ async function extractPortalOptions(portalUrl, username, password) {
         unitOptions: getOptions("#id_bagian_api"),
         jenisAduanOptions: getOptions("#jenis_aduan"),
         petugasOptions: getOptions("#profesix"),
+        dilanjutkanOptions: getOptions("#profesi"),
+        statusOptions: getOptions("#status"),
       };
     });
 
@@ -264,6 +266,7 @@ async function extractPortalOptions(portalUrl, username, password) {
 // 1. Cross-Platform Browser Configuration & Remote Review Session
 // ---------------------------------------------------------
 let lunarActiveReviewSession = null;
+let luniteActiveBatchReviewSession = null;
 
 export async function lunarCloseReviewSession() {
   if (lunarActiveReviewSession) {
@@ -276,6 +279,23 @@ export async function lunarCloseReviewSession() {
       }
     } catch (_) {}
     lunarActiveReviewSession = null;
+  }
+}
+
+/*
+ * Territory: luniteCloseBatchReviewSession — Closes any cached authenticated Playwright batch review session.
+ */
+export async function luniteCloseBatchReviewSession() {
+  if (luniteActiveBatchReviewSession) {
+    try {
+      if (luniteActiveBatchReviewSession.timeoutId) {
+        clearTimeout(luniteActiveBatchReviewSession.timeoutId);
+      }
+      if (luniteActiveBatchReviewSession.browser) {
+        await luniteActiveBatchReviewSession.browser.close();
+      }
+    } catch (_) {}
+    luniteActiveBatchReviewSession = null;
   }
 }
 
@@ -1090,14 +1110,480 @@ function findRecentScreenshot() {
 }
 
 // ---------------------------------------------------------
-// 4b. Multimodal AI & OCR Image Analysis (IT Support & Programmer)
+// 4b. Multimodal AI & OCR Image/Context Fusion Analysis (IT Support & Programmer)
 // ---------------------------------------------------------
+/*
+ * Territory: luniteExtractRmFromText — Extracts hospital medical record numbers (No. RM) from OCR or chat text.
+ */
+export function luniteExtractRmFromText(text = "") {
+  if (!text || typeof text !== "string") return "";
+  const labeledMatch = text.match(
+    /(?:no\.?\s*rm|rekam\s*medis|rm)\s*[:=\-]?\s*(\d[\d\-.]{4,14}\d)/i,
+  );
+  if (labeledMatch && labeledMatch[1]) {
+    return labeledMatch[1].trim();
+  }
+  const hyphenRmMatch = text.match(/\b(\d-\d{2}-\d{2}-\d{2})\b/);
+  if (hyphenRmMatch && hyphenRmMatch[1]) {
+    return hyphenRmMatch[1].trim();
+  }
+  return "";
+}
+
+/*
+ * Territory: luniteExtractTimestampFromText — Extracts a date/time string (DD-MM-YYYY HH:mm or YYYY-MM-DD HH:mm) normalized to YYYY-MM-DD HH:mm.
+ */
+export function luniteExtractTimestampFromText(text = "") {
+  if (!text || typeof text !== "string") return "";
+  const dmyMatch = text.match(
+    /\b(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})(?::\d{2})?\b/,
+  );
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]} ${dmyMatch[4]}:${dmyMatch[5]}`;
+  }
+  const ymdMatch = text.match(
+    /\b(\d{4})-(\d{2})-(\d{2})[T\s]+(\d{2}):(\d{2})(?::\d{2})?\b/,
+  );
+  if (ymdMatch) {
+    return `${ymdMatch[1]}-${ymdMatch[2]}-${ymdMatch[3]} ${ymdMatch[4]}:${ymdMatch[5]}`;
+  }
+  return "";
+}
+
+const LUNITE_GENERIC_OPTION_STOPWORDS = new Set([
+  "dan", "baru", "rsu", "s.kom", "a.md", "skm", "m.eng",
+  "rawat", "inap", "jalan", "medik", "medis", "umum", "penyakit",
+  "dalam", "dokter", "pendaftaran", "loket", "rumah", "tangga",
+  "penunjang", "pelayanan", "service", "cleaning", "aktif", "non"
+]);
+
+/*
+ * Territory: luniteMatchOptionFromText — Matches the best option value from portal_options arrays based on distinctive word tokens in text.
+ */
+export function luniteMatchOptionFromText(text = "", options = []) {
+  if (!text || !Array.isArray(options) || !options.length) return "";
+  const lower = text.toLowerCase();
+  const scored = [];
+  for (const opt of options) {
+    const rawName = String(opt.text || "").toLowerCase();
+    const cleanedTokens = rawName
+      .replace(/^(pav\.?|inst\.?|instalasi|poli|bagian|bidang)\s+/i, "")
+      .split(/[\s\/,\.\(\)-]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 3 && !LUNITE_GENERIC_OPTION_STOPWORDS.has(t));
+    let score = 0;
+    for (const token of cleanedTokens) {
+      const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const wordRegex = new RegExp(`\\b${escaped}\\b`, "i");
+      if (wordRegex.test(lower)) {
+        score += token.length;
+      }
+    }
+    if (score > 0) {
+      scored.push({ value: String(opt.value), score });
+    }
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.length ? scored[0].value : "";
+}
+
+/*
+ * Territory: luniteSanitizeChatGreeting — Strips casual chat salutations and trailing reporter tags from pasted WA messages.
+ */
+function luniteSanitizeChatGreeting(text = "") {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/^(?:selamat\s+(?:pagi|siang|sore|malam)|assalamu'?alaikum|halo|permisi|punten)(?:\s+(?:mbak|mabl|mas|pak|bu|kak|dok|sus|admin|it)){0,2}(?:\s+[a-z0-9._-]+){0,2}\s*[,:!\-]?\s*/i, "")
+    .replace(/^(?:mbak|mabl|mas|pak|bu)\s*[,:]?\s*/i, "")
+    .replace(/[,.;\s]+(?:dari|pelapor|pengadu|oleh|pengirim|a\.?n\.?|atas\s+nama)\s*[:\-]?\s*[^,.;\n]{2,40}\s*$/i, "")
+    .trim();
+}
+
+/*
+ * Territory: luniteExtractPelaporFromText — Extracts reporter / Pelapor name across honorifics (dr, pak, bu, mas, mbak, bidan, suster, etc.) and unit/name labels.
+ */
+export function luniteExtractPelaporFromText(complaintContext = "", ocrText = "") {
+  const UPPER_ACRONYMS = new Set(["igd", "icu", "iccu", "nicu", "picu", "ok", "vk", "tht", "rme", "simrs", "it", "cssd", "ipsrs"]);
+  const LOWER_TITLES = { dr: "dr.", "dr.": "dr.", drg: "drg.", "drg.": "drg.", ns: "Ns.", "ns.": "Ns.", apt: "Apt.", "apt.": "Apt.", bpk: "Bpk.", "bpk.": "Bpk." };
+  const TRAILING_CLAUSE_RE = /\s+(?:di|ke|untuk|karena|soal|terkait|mau|tolong|mohon|terima\s*kasih|makasih|trims|tks|ya|yg|yang)\b.*$/i;
+  const VERB_BEFORE_DARI_RE = /\b(?:pindah|keluar|cetak|print|buka|ambil|edit|ubah|hapus|kirim|masuk|tarik|akses|login|lihat|muncul|error)\s+$/i;
+
+  const formatPelapor = (raw = "") => {
+    const withoutTail = raw
+      .replace(TRAILING_CLAUSE_RE, "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .replace(/[.,;:!?()\[\]-]+$/, "")
+      .trim();
+    if (!withoutTail) return "";
+    return withoutTail
+      .split(" ")
+      .map((word) => {
+        const lower = word.toLowerCase();
+        if (LOWER_TITLES[lower]) return LOWER_TITLES[lower];
+        if (UPPER_ACRONYMS.has(lower)) return lower.toUpperCase();
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(" ");
+  };
+
+  if (complaintContext && typeof complaintContext === "string") {
+    const HONORIFICS = "(?:dr\\.?|drg\\.?|ns\\.?|ners|apt\\.?|dokter|dok|bidan|suster|sus|perawat|pak|bapak|bpk\\.?|bu|ibu|mbak|mbk|mas|kak|sdr\\.?|sdri\\.?|admin|petugas|staf)";
+
+    // Pass 1: Explicit honorific after "dari / pelapor / pengadu / oleh / a.n." (anywhere unless preceded by action verb like "pindah dari")
+    const honorificRegex = new RegExp(
+      `(?:^|[,.;!?\\n]\\s*|\\s+)(?:dari|pelapor|pengadu|oleh|pengirim|a\\.?n\\.?|atas\\s+nama)\\s*[:\\-]?\\s*(${HONORIFICS}\\s+[a-z][a-z.'\\s]{1,32})`,
+      "gi",
+    );
+    let match;
+    while ((match = honorificRegex.exec(complaintContext)) !== null) {
+      const beforeKeyword = complaintContext.slice(0, match.index + (match[0].match(/^\s*/)?.[0]?.length || 0));
+      if (!VERB_BEFORE_DARI_RE.test(beforeKeyword)) {
+        const candidate = formatPelapor(match[1].split(/[,;!?\(\)\n]|\.\s+(?!(?:[a-z]{2,}))/i)[0].replace(/\.\s*$/, ""));
+        if (candidate) return candidate;
+      }
+    }
+
+    // Pass 2: Explicit label/separator without honorific (e.g. ", Dari Sari", "Pelapor: IGD", "keluhan dari IGD")
+    const genericRegex = /(?:^|[,.;!?\n]\s*|\s+)(?:dari|pelapor|pengadu|oleh|pengirim|a\.?n\.?|atas\s+nama)\s*[:\-]?\s*([a-z][a-z.'\s]{1,32})/gi;
+    while ((match = genericRegex.exec(complaintContext)) !== null) {
+      const beforeKeyword = complaintContext.slice(0, match.index + (match[0].match(/^\s*/)?.[0]?.length || 0));
+      if (!VERB_BEFORE_DARI_RE.test(beforeKeyword)) {
+        const rawSeg = match[1].split(/[,;!?\(\)\n]|\.(?=\s*$)/)[0];
+        const candidate = formatPelapor(rawSeg);
+        if (candidate && !/^(?:sekarang|kemarin|tadi|sistem|aplikasi|modul|surat)$/i.test(candidate)) {
+          return candidate;
+        }
+      }
+    }
+
+    // Pass 3: Trailing signature with honorific at end of message (e.g. "..., pak budi" or "... - mbak rina")
+    const trailingHonorificRegex = new RegExp(
+      `[,.;\\-\\n]\\s*(${HONORIFICS}\\s+[a-z][a-z.'\\s]{1,28})\\s*$`,
+      "i",
+    );
+    const trailingMatch = complaintContext.match(trailingHonorificRegex);
+    if (trailingMatch && trailingMatch[1]) {
+      const candidate = formatPelapor(trailingMatch[1]);
+      if (candidate) return candidate;
+    }
+  }
+
+  if (ocrText && typeof ocrText === "string") {
+    const docMatch = ocrText.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2},\s*dr\.?)\b/);
+    if (docMatch && docMatch[1]) {
+      return docMatch[1].trim();
+    }
+  }
+
+  return "";
+}
+
+/*
+ * Territory: luniteFindOptionName — Resolves display label for an option value in portal_options.
+ */
+function luniteFindOptionName(value, options = []) {
+  if (!value || !Array.isArray(options)) return "";
+  const found = options.find((o) => String(o.value) === String(value));
+  return found ? found.text : "";
+}
+
+/*
+ * Territory: luniteRunLocalOcr — Extracts text from screenshot via Tesseract or native Windows.Media.Ocr fallback.
+ */
+function luniteRunLocalOcr(targetPath) {
+  if (!targetPath || !fs.existsSync(targetPath)) return "";
+
+  try {
+    const tesseractOut = execSync(
+      `tesseract "${targetPath}" stdout --oem 1 -l eng`,
+      { timeout: 10000, stdio: ["ignore", "pipe", "ignore"] },
+    )
+      .toString()
+      .trim();
+    if (tesseractOut) {
+      console.log(
+        `[+] [Lunar] Tesseract extracted OCR text (${tesseractOut.length} chars)`,
+      );
+      return tesseractOut;
+    }
+  } catch (_) {}
+
+  if (process.platform === "win32") {
+    const tmpPs1 = path.join(os.tmpdir(), `lunite_ocr_${Date.now()}.ps1`);
+    try {
+      const safeImgPath = path.resolve(targetPath).replace(/'/g, "''");
+      const psScript = `
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+[void][Windows.Storage.StorageFile,Windows.Storage,ContentType=WindowsRuntime]
+[void][Windows.Graphics.Imaging.BitmapDecoder,Windows.Graphics,ContentType=WindowsRuntime]
+[void][Windows.Graphics.Imaging.BitmapTransform,Windows.Graphics,ContentType=WindowsRuntime]
+[void][Windows.Graphics.Imaging.SoftwareBitmap,Windows.Graphics,ContentType=WindowsRuntime]
+[void][Windows.Media.Ocr.OcrEngine,Windows.Foundation,ContentType=WindowsRuntime]
+$asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' })[0]
+function Await($WinRtTask, $ResultType) {
+  $asTask = $asTaskGeneric.MakeGenericMethod($ResultType)
+  $netTask = $asTask.Invoke($null, @($WinRtTask))
+  $netTask.Wait(-1) | Out-Null
+  $netTask.Result
+}
+$engine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
+if ($null -eq $engine) { exit 0 }
+$file = Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync('${safeImgPath}')) ([Windows.Storage.StorageFile])
+$stream = Await ($file.OpenAsync([Windows.Storage.FileAccessMode]::Read)) ([Windows.Storage.Streams.IRandomAccessStream])
+$decoder = Await ([Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream)) ([Windows.Graphics.Imaging.BitmapDecoder])
+$bitmap = $null
+if ($decoder.PixelWidth -lt 1000) {
+  $transform = New-Object Windows.Graphics.Imaging.BitmapTransform
+  $transform.ScaledWidth = [uint32]($decoder.PixelWidth * 2)
+  $transform.ScaledHeight = [uint32]($decoder.PixelHeight * 2)
+  $transform.InterpolationMode = [Windows.Graphics.Imaging.BitmapInterpolationMode]::Cubic
+  $bitmap = Await ($decoder.GetSoftwareBitmapAsync($decoder.BitmapPixelFormat, $decoder.BitmapAlphaMode, $transform, [Windows.Graphics.Imaging.ExifOrientationMode]::RespectExifOrientation, [Windows.Graphics.Imaging.ColorManagementMode]::ColorManageToSRgb)) ([Windows.Graphics.Imaging.SoftwareBitmap])
+} else {
+  $bitmap = Await ($decoder.GetSoftwareBitmapAsync()) ([Windows.Graphics.Imaging.SoftwareBitmap])
+}
+$ocrResult = Await ($engine.RecognizeAsync($bitmap)) ([Windows.Media.Ocr.OcrResult])
+if ($ocrResult -and $ocrResult.Text) {
+  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+  Write-Output $ocrResult.Text
+}
+`;
+      fs.writeFileSync(tmpPs1, psScript, "utf8");
+      const winOcrOut = execSync(
+        `powershell -NoProfile -ExecutionPolicy Bypass -File "${tmpPs1}"`,
+        { timeout: 12000, stdio: ["ignore", "pipe", "ignore"] },
+      )
+        .toString()
+        .trim();
+      if (winOcrOut) {
+        console.log(
+          `[+] [Lunar] Windows OCR extracted text (${winOcrOut.length} chars)`,
+        );
+        return winOcrOut;
+      }
+    } catch (_) {
+    } finally {
+      try {
+        if (fs.existsSync(tmpPs1)) fs.unlinkSync(tmpPs1);
+      } catch (_) {}
+    }
+  }
+
+  return "";
+}
+
+/*
+ * Territory: luniteBuildCompactOllamaPrompt — Builds concise, zero-bloat prompt for local Ollama models (prevents context overflow & hallucination).
+ */
+function luniteBuildCompactOllamaPrompt({
+  role = "it_support",
+  complaintContext = "",
+  solutionHint = "",
+  ocrText = "",
+} = {}) {
+  const cleanChat = complaintContext ? luniteSanitizeChatGreeting(complaintContext) : "";
+  const cleanOcr = ocrText ? ocrText.replace(/\s+/g, " ").trim().slice(0, 900) : "";
+
+  return `Anda asisten ${role === "programmer" ? "Programmer SIMRS" : "IT Support SIMRS"} rumah sakit.
+Susun ringkasan laporan tiket Si-Pangaduan dalam Bahasa Indonesia yang formal, jelas, dan padat (2-3 kalimat) berdasarkan data berikut:
+${cleanChat ? `- Keluhan staf: "${cleanChat}"` : "- Tidak ada pesan chat tambahan."}
+${cleanOcr ? `- Teks terbaca dari screenshot (OCR): "${cleanOcr}"` : ""}
+${solutionHint ? `- Tindakan / solusi IT: "${solutionHint.trim()}"` : "- Tindakan IT: Pengecekan data/sistem terkait pada SIMRS atau perangkat, penyesuaian akses/perbaikan konfigurasi, dan verifikasi berjalan normal."}
+
+ATURAN:
+1. Langsung tuliskan 2-3 kalimat isi laporan siap pakai (tanpa kata pembuka, tanpa markdown **, tanpa JSON, tanpa menyebut 'Lunar' atau 'Miharin').
+2. Jangan mengarang nomor RM, nama ruangan, atau tanggal jika tidak ada pada data di atas.`;
+}
+
+/*
+ * Territory: luniteBuildSupportFusionPrompt — Builds structured prompt fusing screenshot visual evidence, user complaint chat, OCR text, and portal taxonomy.
+ */
+function luniteBuildSupportFusionPrompt({
+  role = "it_support",
+  complaintContext = "",
+  solutionHint = "",
+  ocrText = "",
+  portalOptions = {},
+  hasImage = true,
+} = {}) {
+  const unitList = (portalOptions.unitOptions || [])
+    .map((u) => `${u.value}:${u.text}`)
+    .join(" | ");
+  const jenisList = (portalOptions.jenisAduanOptions || [])
+    .map((j) => `${j.value}:${j.text}`)
+    .join(" | ");
+  const petugasList = (portalOptions.petugasOptions || [])
+    .map((p) => `${p.value}:${p.text}`)
+    .join(" | ");
+
+  const roleHeader =
+    role === "programmer"
+      ? "Anda asisten software engineer SIMRS rumah sakit."
+      : "Anda asisten IT Support & SIMRS rumah sakit.";
+
+  return `${roleHeader}
+Tugas Anda adalah menggabungkan seluruh informasi berikut untuk menyusun laporan tiket Si-Pangaduan secara akurat dan profesional dalam Bahasa Indonesia:
+${hasImage ? "- Ada TAMPILAN GAMBAR / SCREENSHOT terlampir (periksa teks No. RM, nama ruangan/unit, diagnosa, modul/dokumen, pesan error, dan tanggal/jam yang tampak)." : "- Tidak ada gambar langsung ke model; gunakan hasil OCR (jika ada) dan pesan aduan."}
+${ocrText ? `- TEKS HASIL OCR SCREENSHOT:\n"""\n${ocrText.slice(0, 1500)}\n"""` : ""}
+${complaintContext ? `- PESAN ADUAN / CHAT ASLI DARI STAF:\n"""\n${complaintContext.trim()}\n"""` : "- Tidak ada pesan chat tambahan."}
+${solutionHint ? `- CATATAN TINDAKAN / SOLUSI IT DARI PETUGAS:\n"""\n${solutionHint.trim()}\n"""` : ""}
+
+REFERENSI PILIHAN PORTAL (gunakan HANYA value ID yang cocok jika terdeteksi, atau "" jika tidak yakin):
+- UNIT: ${unitList}
+- JENIS ADUAN: ${jenisList}
+- PETUGAS IT: ${petugasList}
+
+ATURAN WAJIB:
+1. Gabungkan konteks pesan aduan staf dan fakta pada screenshot (jika ada) menjadi uraian laporan yang formal, jelas, dan padat (2-4 kalimat): sebutkan keluhan/permasalahan spesifik beserta nomor RM/dokumen/perangkat bila relevan, lalu jelaskan tindakan penyelesaian IT yang dilakukan hingga selesai/normal.
+2. Dilarang keras menyebutkan atau menyertakan watermark, komentar ASCII art, teks 'Lunar Territory', signature kode ('Hands off, unless you're Miharin'), atau nama pengembang/Luna.
+3. Jawab HANYA dalam format JSON valid (tanpa markdown fence, tanpa teks lain) dengan struktur tepat seperti ini:
+{
+  "isiKomplain": "teks uraian laporan formal siap pakai untuk Si-Pangaduan",
+  "noRm": "contoh 0-93-80-69 atau string kosong",
+  "suggestedUnitValue": "kode angka unit atau string kosong",
+  "suggestedJenisValue": "kode angka jenis aduan atau string kosong",
+  "suggestedPetugasValue": "NIP petugas jika disebut di pesan atau string kosong",
+  "suggestedNamaPengadu": "nama pelapor/ruangan pengadu jika jelas atau string kosong",
+  "extractedTimestamp": "format YYYY-MM-DD HH:mm jika tanggal/jam tampak di screenshot atau string kosong"
+}`;
+}
+
+/*
+ * Territory: luniteParseSupportFusionResponse — Parses AI JSON response (or plain-text fallback) and enriches extracted fields deterministically.
+ */
+function luniteParseSupportFusionResponse(
+  rawText,
+  { ocrText = "", complaintContext = "", solutionHint = "", portalOptions = {} } = {},
+) {
+  const combinedText = [complaintContext, ocrText, rawText].filter(Boolean).join("\n");
+  let parsed = null;
+
+  if (rawText && typeof rawText === "string") {
+    const trimmed = rawText.trim();
+    const fenceStripped = trimmed
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    try {
+      parsed = JSON.parse(fenceStripped);
+    } catch (_) {
+      const jsonMatch = fenceStripped.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch (_) {}
+      }
+    }
+  }
+
+  const unitOptions = portalOptions.unitOptions || [];
+  const jenisOptions = portalOptions.jenisAduanOptions || [];
+  const petugasOptions = portalOptions.petugasOptions || [];
+
+  const validUnitSet = new Set(unitOptions.map((u) => String(u.value)));
+  const validJenisSet = new Set(jenisOptions.map((j) => String(j.value)));
+  const validPetugasSet = new Set(petugasOptions.map((p) => String(p.value)));
+
+  let isiKomplain =
+    parsed && typeof parsed.isiKomplain === "string" && parsed.isiKomplain.trim()
+      ? parsed.isiKomplain.trim()
+      : (rawText || "").trim();
+
+  if (parsed && !isiKomplain && complaintContext) {
+    isiKomplain = complaintContext.trim();
+  }
+
+  const deterministicText = [complaintContext, ocrText].filter(Boolean).join("\n");
+
+  let noRm =
+    parsed && typeof parsed.noRm === "string" ? parsed.noRm.trim() : "";
+  if (!noRm || noRm === "-") {
+    noRm = luniteExtractRmFromText(deterministicText);
+  }
+
+  let unitValue =
+    parsed && typeof parsed.suggestedUnitValue === "string"
+      ? parsed.suggestedUnitValue.trim()
+      : "";
+  if (!validUnitSet.has(unitValue)) {
+    unitValue = luniteMatchOptionFromText(complaintContext, unitOptions);
+    if (!unitValue && ocrText) {
+      const isMultiRoomCheckboxForm = /(?:stroke\s*corner|nicu|iccu|rengganis|teratai)/i.test(ocrText) && /(?:surat|masuk\s*rumah|sospek|suspek)/i.test(ocrText);
+      if (!isMultiRoomCheckboxForm) {
+        unitValue = luniteMatchOptionFromText(ocrText, unitOptions);
+      }
+    }
+  }
+
+  let jenisAduanValue =
+    parsed && typeof parsed.suggestedJenisValue === "string"
+      ? parsed.suggestedJenisValue.trim()
+      : "";
+  if (!validJenisSet.has(jenisAduanValue)) {
+    if (/diagnosa|surat\s*mrs|simrs|rme|aplikasi|modul|tidak\s*bisa\s*(?:di\s*)?edit|error|bug/i.test(combinedText)) {
+      jenisAduanValue = validJenisSet.has("1")
+        ? "1"
+        : validJenisSet.has("4")
+          ? "4"
+          : "";
+    } else if (/printer|toner|cartridge|pc|komputer|monitor|keyboard|mouse|os|windows/i.test(combinedText)) {
+      jenisAduanValue = validJenisSet.has("7") ? "7" : "";
+    } else if (/lan|jaringan|wifi|kabel|rj45|internet|ping|switch/i.test(combinedText)) {
+      jenisAduanValue = validJenisSet.has("6") ? "6" : "";
+    }
+  }
+
+  let petugasValue =
+    parsed && typeof parsed.suggestedPetugasValue === "string"
+      ? parsed.suggestedPetugasValue.trim()
+      : "";
+  if (!validPetugasSet.has(petugasValue)) {
+    petugasValue = luniteMatchOptionFromText(complaintContext, petugasOptions);
+  }
+
+  let namaPengadu =
+    parsed && typeof parsed.suggestedNamaPengadu === "string"
+      ? parsed.suggestedNamaPengadu.trim()
+      : "";
+  if (!namaPengadu) {
+    namaPengadu = luniteExtractPelaporFromText(complaintContext, ocrText);
+  }
+
+  let extractedTimestamp =
+    parsed && typeof parsed.extractedTimestamp === "string"
+      ? parsed.extractedTimestamp.trim()
+      : "";
+  if (!extractedTimestamp) {
+    extractedTimestamp = luniteExtractTimestampFromText(deterministicText);
+  }
+
+  return {
+    isiKomplain: sanitizeLunaSignatureFromNotes(isiKomplain),
+    extracted: {
+      noRm: noRm || "",
+      unitValue: unitValue || "",
+      unitName: luniteFindOptionName(unitValue, unitOptions),
+      jenisAduanValue: jenisAduanValue || "",
+      jenisName: luniteFindOptionName(jenisAduanValue, jenisOptions),
+      petugasValue: petugasValue || "",
+      petugasName: luniteFindOptionName(petugasValue, petugasOptions),
+      namaPengadu: namaPengadu || "",
+      extractedTimestamp: extractedTimestamp || "",
+      solutionApplied: Boolean(solutionHint && solutionHint.trim()),
+    },
+  };
+}
+
 export async function analyzeSupportEvidenceImage({
-  imageBase64,
+  imageBase64 = null,
   imagePath = null,
   fileName = "evidence.png",
   unitValue = "44",
   jenisAduanValue = "1",
+  complaintContext = "",
+  solutionHint = "",
   apiKey = null,
   role = "it_support",
   aiMode = null,
@@ -1130,22 +1616,31 @@ export async function analyzeSupportEvidenceImage({
     );
   } else if (targetPath && fs.existsSync(targetPath)) {
     rawBase64 = fs.readFileSync(targetPath).toString("base64");
-  } else {
-    throw new Error("Tidak ada data gambar atau file gambar yang valid.");
+  } else if (!complaintContext || !complaintContext.trim()) {
+    throw new Error("Harap lampirkan gambar bukti atau masukkan pesan aduan / kronologi masalah.");
   }
 
-  let analysisText = null;
+  let rawAiResponse = null;
   let analysisSource = null;
 
   const settings = getEffectiveSettings();
+  const portalOptions = loadPortalOptions();
   const finalApiKey =
     apiKey || settings.geminiApiKey || process.env.GEMINI_API_KEY;
   const effectiveAiMode = aiMode || settings.aiMode || "gemini_fallback";
   const effectiveLocalModel = localModel || settings.localModel || "qwen2.5-coder:7b";
   const effectiveOllamaUrl = (ollamaUrl || settings.ollamaUrl || "http://127.0.0.1:11434").replace(/\/+$/, "");
 
-  // 1. Priority #1: Official Google Gemini 2.5 Flash / Flash Latest Vision API (if not local_only)
-  if (effectiveAiMode !== "local_only" && finalApiKey && rawBase64) {
+  const fusionPrompt = luniteBuildSupportFusionPrompt({
+    role,
+    complaintContext,
+    solutionHint,
+    portalOptions,
+    hasImage: Boolean(rawBase64),
+  });
+
+  // 1. Priority #1: Official Google Gemini 2.5 Flash / Flash Latest API (if not local_only)
+  if (effectiveAiMode !== "local_only" && finalApiKey && (rawBase64 || complaintContext.trim())) {
     const candidateGeminiModels = [
       "gemini-2.5-flash",
       "gemini-flash-latest",
@@ -1163,26 +1658,19 @@ export async function analyzeSupportEvidenceImage({
           ? "image/webp"
           : "image/png";
 
-    let prompt;
-    if (role === "programmer") {
-      prompt = `Anda asisten software engineer untuk sistem rumah sakit.
-Analisis tangkapan layar (screenshot) aplikasi / error modul / antarmuka sistem SIMRS ini secara sangat akurat dan profesional dalam bahasa Indonesia:
-1. Sebutkan secara spesifik apa tampilan modul / halaman / fitur yang tertera atau pesan error / exception / status response yang tampak pada layar.
-2. Jelaskan tindakan teknis perbaikan bug, penyesuaian logika sistem, optimasi antarmuka pengguna, atau penanganan data yang dilakukan untuk menyelesaikannya.
-ATURAN WAJIB: Dilarang keras menyebutkan atau menyertakan watermark, komentar ASCII art, teks 'Lunar Territory', signature kode ('Hands off, unless you're Miharin'), atau nama pengembang/Luna. Fokus murni pada masalah teknis modul SIMRS atau sistem.
-Format output: Berikan teks hasil analisis langsung yang siap pakai, rapi, dan padat (2-3 kalimat) untuk kolom 'Isi Komplain / Ringkasan Pekerjaan' laporan IT Programmer tanpa kata pembuka atau penutup basa-basi.`;
-    } else {
-      prompt = `Anda asisten IT untuk rumah sakit.
-Analisis foto kendala IT Support ini secara sangat akurat dan profesional dalam bahasa Indonesia:
-1. Sebutkan secara spesifik apa perangkat / komponen / tampilan error yang bermasalah (misal tipe printer & letak kertas macet, kabel LAN RJ45 lepas/rusak, monitor no signal, kode error BSOD Windows, atau notifikasi pesan error pada aplikasi SIMRS/pendaftaran).
-2. Jelaskan tindakan teknis troubleshooting / perbaikan yang dilakukan untuk memulihkannya hingga normal.
-ATURAN WAJIB: Dilarang keras menyebutkan atau menyertakan watermark, komentar ASCII art, teks 'Lunar Territory', signature kode, atau nama pengembang/Luna.
-Format output: Berikan teks hasil analisis langsung yang siap pakai, rapi, dan padat (2-3 kalimat) untuk kolom 'Isi Komplain' laporan IT tanpa kata pembuka atau penutup basa-basi.`;
+    const parts = [{ text: fusionPrompt }];
+    if (rawBase64) {
+      parts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: rawBase64,
+        },
+      });
     }
 
     for (const geminiModel of candidateGeminiModels) {
       console.log(
-        `[*] [Lunar] Calling Google ${geminiModel} Vision (Google Antigravity)...`,
+        `[*] [Lunar] Calling Google ${geminiModel} ${rawBase64 ? "Vision+Context" : "Context"} Fusion...`,
       );
       try {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${finalApiKey}`;
@@ -1192,20 +1680,7 @@ Format output: Berikan teks hasil analisis langsung yang siap pakai, rapi, dan p
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: prompt },
-                  {
-                    inline_data: {
-                      mime_type: mimeType,
-                      data: rawBase64,
-                    },
-                  },
-                ],
-              },
-            ],
+            contents: [{ role: "user", parts }],
             generationConfig: {
               temperature: 0.2,
               maxOutputTokens: 2048,
@@ -1219,124 +1694,194 @@ Format output: Berikan teks hasil analisis langsung yang siap pakai, rapi, dan p
           const data = await geminiRes.json();
           const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text && text.trim()) {
-            analysisText = sanitizeLunaSignatureFromNotes(text.trim());
+            rawAiResponse = text.trim();
             analysisSource = `Gemini (${geminiModel})`;
             console.log(
-              `[+] [Lunar] Vision analysis succeeded with ${analysisSource}!`,
+              `[+] [Lunar] Fusion analysis succeeded with ${analysisSource}!`,
             );
             break;
           }
         } else {
           const errText = await geminiRes.text();
           console.log(
-            `[!] [Lunar] Gemini Vision API (${geminiModel}) returned status ${geminiRes.status}: ${errText}`,
+            `[!] [Lunar] Gemini API (${geminiModel}) returned status ${geminiRes.status}: ${errText}`,
           );
         }
       } catch (geminiErr) {
         console.log(
-          `[!] [Lunar] Gemini Vision request (${geminiModel}) failed: ${geminiErr.message}`,
+          `[!] [Lunar] Gemini request (${geminiModel}) failed: ${geminiErr.message}`,
         );
       }
     }
   }
 
-  // 2. Priority #2: Local Ollama Multimodal Vision (if not gemini_only)
-  if (!analysisText && effectiveAiMode !== "gemini_only" && rawBase64) {
-    console.log(`[*] [Lunar] Attempting Ollama vision analysis (${role}) via ${effectiveOllamaUrl}...`);
-    let prompt;
-    if (role === "programmer") {
-      prompt = `Anda adalah asisten software developer / programmer rumah sakit. Analisis tangkapan layar aplikasi/modul SIMRS ini. Tuliskan ringkasan 2-3 kalimat untuk kolom 'Isi Komplain' laporan pekerjaan:
-1. Sebutkan modul/fitur yang diperbaiki atau kendala error yang tampak.
-2. Jelaskan tindakan teknis perbaikan logika atau pembaruan antarmuka modul.
-ATURAN WAJIB: Dilarang keras menyebutkan watermark, komentar ASCII art, banner 'Lunar Territory', signature kode, atau nama pengembang/Luna.
-Format jawaban langsung teks siap pakai tanpa pengantar/penutup.`;
-    } else {
-      prompt = `Anda adalah asisten IT Support rumah sakit. Analisis foto/gambar kendala IT ini. Tuliskan ringkasan 2-3 kalimat untuk kolom 'Isi Komplain' laporan pekerjaan IT:
-1. Sebutkan kendala/kerusakan perangkat atau pesan error yang terlihat.
-2. Jelaskan tindakan teknis perbaikan yang dilakukan hingga perangkat kembali normal.
-ATURAN WAJIB: Dilarang keras menyebutkan watermark, komentar ASCII art, teks 'Lunar Territory', signature kode, atau nama pengembang/Luna.
-Format jawaban langsung teks siap pakai tanpa pengantar/penutup.`;
-    }
+  // 2. Priority #2: Local Ollama Multimodal Vision (only installed vision models) -> then Local OCR + Text Ollama Fusion
+  let ocrText = "";
+  if (!rawAiResponse && effectiveAiMode !== "gemini_only" && (rawBase64 || complaintContext.trim())) {
+    let installedModels = [];
+    try {
+      const tagsController = new AbortController();
+      const tagsTimeout = setTimeout(() => tagsController.abort(), 2000);
+      const tagsRes = await fetch(`${effectiveOllamaUrl}/api/tags`, { signal: tagsController.signal });
+      clearTimeout(tagsTimeout);
+      if (tagsRes.ok) {
+        const tagsData = await tagsRes.json();
+        installedModels = (tagsData.models || []).map((m) => m.name || m.model);
+      }
+    } catch (_) {}
 
-    const candidateModels = [
+    const visionCandidates = [
       effectiveLocalModel,
       "luna",
       "gemma4:e4b",
       "llava",
       "qwen2.5-vl",
-    ].filter((m, i, arr) => m && arr.indexOf(m) === i);
+      "qwen2.5vl",
+      "gemma3",
+    ].filter((m, i, arr) => {
+      if (!m || arr.indexOf(m) !== i) return false;
+      if (installedModels.length > 0) {
+        return installedModels.some((im) => im === m || im.startsWith(m + ":"));
+      }
+      return true;
+    });
 
-    for (const model of candidateModels) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        const res = await fetch(`${effectiveOllamaUrl}/api/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model,
-            prompt,
-            images: [rawBase64],
-            stream: false,
-          }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
+    if (rawBase64) {
+      console.log(`[*] [Lunar] Checking Ollama vision models (${visionCandidates.join(", ") || "none"})...`);
+      for (const model of visionCandidates) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000);
+          const res = await fetch(`${effectiveOllamaUrl}/api/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model,
+              prompt: fusionPrompt,
+              images: [rawBase64],
+              stream: false,
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.response && data.response.trim()) {
-            analysisText = sanitizeLunaSignatureFromNotes(data.response.trim());
-            analysisSource = `Ollama Vision (${model})`;
-            console.log(
-              `[+] [Lunar] Vision analysis succeeded with ${analysisSource}!`,
-            );
-            break;
+          if (res.ok) {
+            const data = await res.json();
+            if (data.response && data.response.trim()) {
+              rawAiResponse = data.response.trim();
+              analysisSource = `Ollama Vision (${model})`;
+              console.log(
+                `[+] [Lunar] Vision fusion succeeded with ${analysisSource}!`,
+              );
+              break;
+            }
           }
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
+    }
+
+    // Extract OCR text before falling back to text-only Ollama model
+    if (!rawAiResponse && targetPath && fs.existsSync(targetPath)) {
+      ocrText = luniteRunLocalOcr(targetPath);
+    }
+
+    // Text-only Ollama Fusion (e.g. qwen2.5-coder:7b + Windows OCR + WA chat message)
+    if (!rawAiResponse && (ocrText || complaintContext.trim())) {
+      const compactPrompt = luniteBuildCompactOllamaPrompt({
+        role,
+        complaintContext,
+        solutionHint,
+        ocrText,
+      });
+      const textCandidates = [
+        effectiveLocalModel,
+        ...installedModels,
+      ].filter((m, i, arr) => m && arr.indexOf(m) === i);
+
+      console.log(`[*] [Lunar] Attempting Ollama Text+OCR fusion (${textCandidates[0] || "default"})...`);
+      for (const model of textCandidates) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 45000);
+          const res = await fetch(`${effectiveOllamaUrl}/api/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model,
+              prompt: compactPrompt,
+              stream: false,
+              options: {
+                temperature: 0.15,
+                num_predict: 260,
+              },
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.response && data.response.trim()) {
+              rawAiResponse = data.response.trim();
+              analysisSource = ocrText
+                ? `Ollama (${model}) + OCR`
+                : `Ollama (${model})`;
+              console.log(
+                `[+] [Lunar] Text+OCR fusion succeeded with ${analysisSource}!`,
+              );
+              break;
+            }
+          }
+        } catch (_) {}
+      }
     }
   }
 
-  // 2. If Ollama vision didn't produce text, use Tesseract OCR
-  let ocrText = "";
-  if (!analysisText && targetPath && fs.existsSync(targetPath)) {
-    try {
-      console.log(`[*] [Lunar] Running Tesseract OCR on ${targetPath}...`);
-      ocrText = execSync(
-        `tesseract "${targetPath}" stdout --oem 1 -l eng 2>/dev/null`,
-        { timeout: 10000 },
-      )
-        .toString()
-        .trim();
-      if (ocrText) {
-        console.log(
-          `[+] [Lunar] Tesseract extracted OCR text (${ocrText.length} chars)`,
-        );
-      }
-    } catch (_) {}
+  // 3. Always attempt local OCR when no AI result was returned (e.g. gemini_only mode) and an image exists
+  if (!rawAiResponse && !ocrText && targetPath && fs.existsSync(targetPath)) {
+    ocrText = luniteRunLocalOcr(targetPath);
   }
 
-  // 3. Heuristic / Semantic Classifier based on OCR text or unit/category
-  if (!analysisText) {
-    const lower = (ocrText || "").toLowerCase();
+  // 4. Parse AI JSON or build deterministic Context + OCR fallback
+  let parsedResult;
+  if (rawAiResponse) {
+    parsedResult = luniteParseSupportFusionResponse(rawAiResponse, {
+      ocrText,
+      complaintContext,
+      solutionHint,
+      portalOptions,
+    });
+  } else {
+    const combinedRaw = [complaintContext, ocrText].filter(Boolean).join("\n");
+    const lower = combinedRaw.toLowerCase();
     const snippet = ocrText
       ? ocrText.replace(/\s+/g, " ").trim().slice(0, 120)
       : "";
+    const rmFound = luniteExtractRmFromText(combinedRaw);
+    let fallbackText = "";
 
-    if (role === "programmer") {
+    if (complaintContext && complaintContext.trim()) {
+      const cleanContext = luniteSanitizeChatGreeting(complaintContext);
+      const solutionPart = solutionHint && solutionHint.trim()
+        ? solutionHint.trim()
+        : /mrs|diagnosa|rawat\s*inap|terlayani|edit|simrs|rme/i.test(lower)
+          ? "Dilakukan pengecekan data registrasi pasien pada modul SIMRS, penyesuaian/pembukaan akses edit data terkait agar sesuai kondisi klinis, dan verifikasi penyimpanan berhasil."
+          : "Dilakukan penelusuran kendala bersama unit terkait, perbaikan konfigurasi/akses sistem, dan verifikasi layanan telah kembali normal.";
+      fallbackText = `Penanganan Aduan Unit${rmFound ? ` (No. RM: ${rmFound})` : ""}:\nBerdasarkan laporan unit terkait kendala: "${cleanContext}"${snippet ? ` serta bukti terlampir ("${snippet}")` : ""}. ${solutionPart}`;
+      analysisSource = ocrText ? "Context + OCR Fusion Fallback" : "Complaint Context Fallback";
+    } else if (role === "programmer") {
       if (
         /error|exception|sql|failed|timeout|http|500|404|database|unauthorized|null|undefined|syntaxerror|typeerror|uncaught/i.test(
           lower,
         )
       ) {
-        analysisText = `Perbaikan Bug / Error Aplikasi SIMRS:\nTerdeteksi kendala eksekusi sistem pada antarmuka aplikasi${snippet ? ` ("${snippet}")` : ""}. Dilakukan penelusuran exception, debugging alur kode sumber, penyesuaian penanganan data, dan modul berhasil kembali berjalan dengan normal.`;
+        fallbackText = `Perbaikan Bug / Error Aplikasi SIMRS:\nTerdeteksi kendala eksekusi sistem pada antarmuka aplikasi${snippet ? ` ("${snippet}")` : ""}. Dilakukan penelusuran exception, debugging alur kode sumber, penyesuaian penanganan data, dan modul berhasil kembali berjalan dengan normal.`;
         analysisSource = "Tesseract OCR (Code/Error Pattern)";
       } else if (ocrText && ocrText.length > 15) {
-        analysisText = `Pengembangan & Pemeliharaan Modul SIMRS:\nBerdasarkan tangkapan layar antarmuka sistem${snippet ? ` ("${snippet}")` : ""}. Dilakukan penyesuaian fungsionalitas komponen, optimasi alur kerja pengguna, dan verifikasi tampilan modul berfungsi dengan baik.`;
+        fallbackText = `Pengembangan & Pemeliharaan Modul SIMRS:\nBerdasarkan tangkapan layar antarmuka sistem${snippet ? ` ("${snippet}")` : ""}. Dilakukan penyesuaian fungsionalitas komponen, optimasi alur kerja pengguna, dan verifikasi tampilan modul berfungsi dengan baik.`;
         analysisSource = "Tesseract OCR (Module Feature Pattern)";
       } else {
-        analysisText = `Pemeliharaan dan Perbaikan Modul SIMRS:\nDilakukan perbaikan fungsionalitas dan penyesuaian tampilan modul aplikasi berdasarkan tangkapan layar terlampir. Pengujian modul selesai dilakukan dan siap digunakan oleh unit kerja.`;
+        fallbackText = `Pemeliharaan dan Perbaikan Modul SIMRS:\nDilakukan perbaikan fungsionalitas dan penyesuaian tampilan modul aplikasi berdasarkan tangkapan layar terlampir. Pengujian modul selesai dilakukan dan siap digunakan oleh unit kerja.`;
         analysisSource = "Programmer Fallback";
       }
     } else {
@@ -1345,52 +1890,65 @@ Format jawaban langsung teks siap pakai tanpa pengantar/penutup.`;
           lower,
         )
       ) {
-        analysisText = `Kendala Printer:\nTerindikasi kendala pencetakan / paper jam${snippet ? ` ("${snippet}")` : ""} pada perangkat printer. Dilakukan pemeriksaan mekanik penarik kertas, pembersihan sisa serpihan pada roller, reset print spooler, dan uji coba cetak dokumen berhasil keluar dengan jelas dan normal.`;
+        fallbackText = `Kendala Printer:\nTerindikasi kendala pencetakan / paper jam${snippet ? ` ("${snippet}")` : ""} pada perangkat printer. Dilakukan pemeriksaan mekanik penarik kertas, pembersihan sisa serpihan pada roller, reset print spooler, dan uji coba cetak dokumen berhasil keluar dengan jelas dan normal.`;
         analysisSource = "Tesseract OCR (Printer Pattern)";
       } else if (
         /network|ethernet|lan|cable|unplugged|disconnected|internet|dns|gateway|dhcp|ip conflict|wifi/.test(
           lower,
         )
       ) {
-        analysisText = `Kendala Konektivitas Jaringan:\nTerdeteksi gangguan sambungan jaringan LAN / komunikasi data${snippet ? ` ("${snippet}")` : ""}. Dilakukan pengecekan konektor RJ45 dan kabel UTP, pengujian koneksi switch, peremajaan IP configuration, serta verifikasi ping ke server SIMRS kembali lancar dan stabil.`;
+        fallbackText = `Kendala Konektivitas Jaringan:\nTerdeteksi gangguan sambungan jaringan LAN / komunikasi data${snippet ? ` ("${snippet}")` : ""}. Dilakukan pengecekan konektor RJ45 dan kabel UTP, pengujian koneksi switch, peremajaan IP configuration, serta verifikasi ping ke server SIMRS kembali lancar dan stabil.`;
         analysisSource = "Tesseract OCR (Network Pattern)";
       } else if (
         /no signal|out of range|display|hdmi|vga|monitor|blank|flicker/.test(
           lower,
         )
       ) {
-        analysisText = `Kendala Tampilan Monitor:\nLayar monitor tidak menampilkan output / no signal${snippet ? ` ("${snippet}")` : ""}. Dilakukan pemeriksaan sambungan kabel display (HDMI/VGA), re-seating port display adapter dan kabel daya, serta penyesuaian resolusi. Tampilan layar kembali menyala normal.`;
+        fallbackText = `Kendala Tampilan Monitor:\nLayar monitor tidak menampilkan output / no signal${snippet ? ` ("${snippet}")` : ""}. Dilakukan pemeriksaan sambungan kabel display (HDMI/VGA), re-seating port display adapter dan kabel daya, serta penyesuaian resolusi. Tampilan layar kembali menyala normal.`;
         analysisSource = "Tesseract OCR (Display Pattern)";
       } else if (
         /bsod|blue screen|reboot|boot|windows|crash|system error|0x[0-9a-f]+/i.test(
           lower,
         )
       ) {
-        analysisText = `Kendala Sistem Operasi / Komputer:\nPerangkat mengalami crash / indikasi error sistem${snippet ? ` ("${snippet}")` : ""}. Dilakukan pemeriksaan startup, perbaikan integritas berkas sistem, pembersihan temporary cache, dan uji restart. Komputer dapat beroperasi kembali secara normal.`;
+        fallbackText = `Kendala Sistem Operasi / Komputer:\nPerangkat mengalami crash / indikasi error sistem${snippet ? ` ("${snippet}")` : ""}. Dilakukan pemeriksaan startup, perbaikan integritas berkas sistem, pembersihan temporary cache, dan uji restart. Komputer dapat beroperasi kembali secara normal.`;
         analysisSource = "Tesseract OCR (OS/System Pattern)";
+      } else if (
+        /surat masuk rumah sakit|mrs|diagnosa|suspek|rawat inap/.test(lower)
+      ) {
+        fallbackText = `Penanganan Aduan Surat Masuk Rumah Sakit (MRS)${rmFound ? ` No. RM ${rmFound}` : ""}:\nTerdapat kendala pembaruan data/diagnosa pada dokumen Surat Masuk Rumah Sakit (MRS)${snippet ? ` ("${snippet}")` : ""}. Dilakukan pengecekan data registrasi pasien pada SIMRS, penyesuaian akses edit diagnosa, dan verifikasi cetak ulang dokumen telah sesuai.`;
+        analysisSource = "Tesseract OCR (MRS Document Pattern)";
       } else if (
         /error|exception|sql|failed|timeout|http|500|404|database|unauthorized|login|warning/i.test(
           lower,
         )
       ) {
-        analysisText = `Kendala Aplikasi SIMRS / Sistem Informasi:\nMuncul notifikasi kendala pada antarmuka aplikasi${snippet ? ` ("${snippet}")` : ""}. Dilakukan penelusuran pesan error, perbaikan konfigurasi sesi pengguna, pengujian alur modul, dan aplikasi dapat kembali digunakan oleh staf unit kerja.`;
+        fallbackText = `Kendala Aplikasi SIMRS / Sistem Informasi:\nMuncul notifikasi kendala pada antarmuka aplikasi${snippet ? ` ("${snippet}")` : ""}. Dilakukan penelusuran pesan error, perbaikan konfigurasi sesi pengguna, pengujian alur modul, dan aplikasi dapat kembali digunakan oleh staf unit kerja.`;
         analysisSource = "Tesseract OCR (Application Error Pattern)";
       } else if (ocrText && ocrText.length > 15) {
-        analysisText = `Kendala Operasional IT:\nBerdasarkan keterangan yang tertera pada layar / foto kendala:\n"${snippet}"\nDilakukan penanganan teknis, perbaikan konfigurasi, dan pengujian fungsi hingga sistem kembali beroperasi dengan baik.`;
+        fallbackText = `Kendala Operasional IT:\nBerdasarkan keterangan yang tertera pada layar / foto kendala:\n"${snippet}"\nDilakukan penanganan teknis, perbaikan konfigurasi, dan pengujian fungsi hingga sistem kembali beroperasi dengan baik.`;
         analysisSource = "Tesseract OCR (General Text)";
       } else {
-        analysisText = `Pemeliharaan dan Perbaikan Perangkat IT:\nDilakukan inspeksi fisik terhadap perangkat keras dan sambungan kabel pada unit kerja berdasarkan foto kendala terlampir. Dilakukan troubleshooting teknis, pembersihan komponen, dan pengujian fungsionalitas hingga perangkat berfungsi normal kembali.`;
+        fallbackText = `Pemeliharaan dan Perbaikan Perangkat IT:\nDilakukan inspeksi fisik terhadap perangkat keras dan sambungan kabel pada unit kerja berdasarkan foto kendala terlampir. Dilakukan troubleshooting teknis, pembersihan komponen, dan pengujian fungsionalitas hingga perangkat berfungsi normal kembali.`;
         analysisSource = "Contextual Hardware Fallback";
       }
     }
+
+    parsedResult = luniteParseSupportFusionResponse(fallbackText, {
+      ocrText,
+      complaintContext,
+      solutionHint,
+      portalOptions,
+    });
   }
 
   return {
     success: true,
-    analysis: sanitizeLunaSignatureFromNotes(analysisText),
+    analysis: parsedResult.isiKomplain,
     source: analysisSource,
-    imagePath: targetPath,
+    imagePath: targetPath || null,
     extractedOcr: ocrText || null,
+    extracted: parsedResult.extracted,
   };
 }
 // ---------------------------------------------------------
@@ -1623,87 +2181,169 @@ async function captureRemedisEvidence(
 }
 
 // ---------------------------------------------------------
-// 6. Main Si-Pangaduan Form Automation
+// 6. Main Si-Pangaduan Form Automation & Batch Queue Helpers
 // ---------------------------------------------------------
-export async function runDocumentationIT({
-  role = "programmer",
-  namaPengadu = CURRENT_USER,
-  petugasValue = null,
-  unitValue = "44", // Default: Inst. Rekam Medik
-  jenisAduanValue = "4", // Default: Perbaikan Aplikasi
-  noRm = "-",
-  isiKomplain = "",
-  screenshotPath = null,
-  clickSimpan = false,
-  useOllama = false,
-  ollamaModel = null,
-  aiMode = null,
-  portalUrl = null,
-  portalUsername = null,
-  portalPassword = null,
-  repoPath = process.cwd(),
+/*
+ * Territory: luniteResolveBaseDeltaMinutes — Resolves effective duration in minutes using template override or jenisAduan defaults.
+ */
+export function luniteResolveBaseDeltaMinutes(
+  jenisAduanValue = "4",
+  customDurationMinutes = null,
+) {
+  const parsedCustom = Number(customDurationMinutes);
+  if (Number.isFinite(parsedCustom) && parsedCustom > 0) {
+    return Math.round(parsedCustom);
+  }
+  if (jenisAduanValue === "4") {
+    return 23 * 60 + 59; // 1439 mins
+  }
+  if (jenisAduanValue === "5") {
+    return (3 * 24 + 23) * 60 + 59; // 5759 mins
+  }
+  if (["6", "7", "8"].includes(String(jenisAduanValue))) {
+    return 45;
+  }
+  return 60;
+}
+
+/*
+ * Territory: luniteComputeTicketTimestamps — Computes formatted Si-Pangaduan reception and completion timestamps.
+ */
+export function luniteComputeTicketTimestamps({
+  jenisAduanValue = "4",
+  customDurationMinutes = null,
   waktuPenerimaan = null,
   waktuPenyelesaian = null,
   timestampAnchor = "selesai",
   randomDelta = false,
-  isWeb = false,
 } = {}) {
-  console.log("\n======================================================");
-  console.log("         🌙 LUNAR IT DOCUMENTATION AUTOMATION");
-  console.log("======================================================\n");
+  let finalWaktuPenerimaan = waktuPenerimaan;
+  let finalWaktuPenyelesaian = waktuPenyelesaian;
 
-  const settings = getEffectiveSettings();
-  const finalPortalUrl =
-    portalUrl || settings.portalUrl || "http://192.168.0.152/it/";
-  const finalUsername = portalUsername || settings.portalUsername || "01229";
-  const finalPassword = portalPassword || settings.portalPassword || "123456";
-  const effectiveAiMode = aiMode || settings.aiMode || "gemini_fallback";
-  const effectiveLocalModel = ollamaModel || settings.localModel || "qwen2.5-coder:7b";
+  if (!finalWaktuPenerimaan || !finalWaktuPenyelesaian) {
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const formatDateTime = (d) =>
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-  let rawIsiKomplain = isiKomplain;
-  let finalScreenshot = screenshotPath;
+    let baseMinutes = luniteResolveBaseDeltaMinutes(
+      jenisAduanValue,
+      customDurationMinutes,
+    );
+    if (randomDelta) {
+      const factor = 0.85 + Math.random() * 0.15;
+      baseMinutes = Math.round(baseMinutes * factor);
+    }
+    const deltaMs = baseMinutes * 60 * 1000;
 
-  // --- PROGRAMMER TRACK ---
+    if (timestampAnchor === "selesai") {
+      const selDate = now;
+      const penDate = new Date(selDate.getTime() - deltaMs);
+      if (!finalWaktuPenyelesaian) finalWaktuPenyelesaian = formatDateTime(selDate);
+      if (!finalWaktuPenerimaan) finalWaktuPenerimaan = formatDateTime(penDate);
+    } else {
+      const penDate = now;
+      const selDate = new Date(penDate.getTime() + deltaMs);
+      if (!finalWaktuPenerimaan) finalWaktuPenerimaan = formatDateTime(penDate);
+      if (!finalWaktuPenyelesaian) finalWaktuPenyelesaian = formatDateTime(selDate);
+    }
+  }
+
+  return {
+    waktuPenerimaan: finalWaktuPenerimaan,
+    waktuPenyelesaian: finalWaktuPenyelesaian,
+  };
+}
+
+/*
+ * Territory: luniteCreateAuthenticatedPortalPage — Launches browser and authenticates once to Si-Pangaduan.
+ */
+async function luniteCreateAuthenticatedPortalPage({
+  portalUrl,
+  portalUsername,
+  portalPassword,
+} = {}) {
+  console.log("[*] [Lunar] Launching live desktop browser...");
+  const browser = await lunarLaunchBrowser();
+  const context = await browser.newContext({
+    viewport: { width: 1600, height: 1000 },
+    deviceScaleFactor: 1.25,
+  });
+  const page = await context.newPage();
+
+  console.log(
+    `[*] [Lunar] Authenticating to Si-Pangaduan as "${portalUsername}" (${portalUrl})...`,
+  );
+  await page.goto(portalUrl, { waitUntil: "networkidle", timeout: 15000 });
+  await page.waitForSelector("#username", { timeout: 10000 });
+  await page.fill("#username", portalUsername);
+  await page.fill("#password", portalPassword);
+
+  await Promise.allSettled([
+    page.waitForNavigation({ waitUntil: "networkidle", timeout: 10000 }),
+    page.click("#btnLogin"),
+  ]);
+
+  await page.waitForTimeout(1500);
+  return { browser, context, page };
+}
+
+/*
+ * Territory: lunitePrepareTicketPayload — Resolves defaults, AI programmer notes/diff card if needed, and formatted HTML.
+ */
+async function lunitePrepareTicketPayload(ticket = {}, settings = {}) {
+  const role = ticket.role || "programmer";
+  const namaPengadu = ticket.namaPengadu || CURRENT_USER;
+  const effectivePetugas =
+    ticket.petugasValue || settings.petugasValue || ticket.portalUsername || settings.portalUsername || "01229";
+  const unitValue = ticket.unitValue || "44";
+  const jenisAduanValue = ticket.jenisAduanValue || "4";
+  const statusValue = String(ticket.statusValue || "1") === "2" ? "2" : "1";
+  const dilanjutkanValue = statusValue === "2" ? (ticket.dilanjutkanValue || "") : "";
+  const noRm = ticket.noRm || "-";
+  const repoPath = ticket.repoPath || process.cwd();
+  const effectiveAiMode = ticket.aiMode || settings.aiMode || "gemini_fallback";
+  const effectiveLocalModel = ticket.ollamaModel || settings.localModel || "qwen2.5-coder:7b";
+
+  let rawIsiKomplain = ticket.isiKomplain || "";
+  let finalScreenshot = ticket.screenshotPath || null;
+
   if (role === "programmer") {
     let gitLog = "";
     let gitDiff = "";
-
-    try {
-      gitLog = execSync('git log -1 --pretty=format:"%h - %s"', {
-        cwd: repoPath,
-      })
-        .toString()
-        .trim();
-      console.log(`[*] [Lunar] Detected latest commit: ${gitLog}`);
-    } catch (_) {
-      gitLog = "Latest Changes";
+    if (!rawIsiKomplain || !finalScreenshot) {
+      try {
+        gitLog = execSync('git log -1 --pretty=format:"%h - %s"', { cwd: repoPath })
+          .toString()
+          .trim();
+      } catch (_) {
+        gitLog = "Latest Changes";
+      }
+      gitDiff = getEffectiveGitDiff(repoPath);
     }
 
-    gitDiff = getEffectiveGitDiff(repoPath);
-
     if (!rawIsiKomplain) {
-      if ((useOllama || effectiveAiMode) && gitDiff) {
+      if ((ticket.useOllama || effectiveAiMode) && gitDiff) {
         let aiNotes = null;
-        if (effectiveAiMode === "local_only" || (useOllama && !settings.geminiApiKey)) {
+        if (effectiveAiMode === "local_only" || (ticket.useOllama && !settings.geminiApiKey)) {
           aiNotes = await generateReleaseNotesWithOllama(
             gitDiff,
             effectiveLocalModel,
-            { repoName: path.basename(repoPath), commitMsg: gitLog, ollamaUrl: settings.ollamaUrl }
+            { repoName: path.basename(repoPath), commitMsg: gitLog, ollamaUrl: settings.ollamaUrl },
           );
         } else {
-          // Gemini with fallback to Local AI
           if (settings.geminiApiKey) {
             aiNotes = await generateReleaseNotesWithGemini(
               gitDiff,
               settings.geminiApiKey,
-              { repoName: path.basename(repoPath), commitMsg: gitLog }
+              { repoName: path.basename(repoPath), commitMsg: gitLog },
             );
           }
           if (!aiNotes && effectiveAiMode !== "gemini_only") {
             aiNotes = await generateReleaseNotesWithOllama(
               gitDiff,
               effectiveLocalModel,
-              { repoName: path.basename(repoPath), commitMsg: gitLog, ollamaUrl: settings.ollamaUrl }
+              { repoName: path.basename(repoPath), commitMsg: gitLog, ollamaUrl: settings.ollamaUrl },
             );
           }
         }
@@ -1737,48 +2377,46 @@ Rincian Perubahan:
     }
   }
 
-  // Format Isi Komplain to clean HTML without raw asterisks (**)
-  const cleanKomplainHtml = formatKomplainToCleanHtml(rawIsiKomplain);
-
-  // --- BROWSER AUTOMATION ---
-  console.log("[*] [Lunar] Launching live desktop browser...");
-  const browser = await lunarLaunchBrowser();
-  const context = await browser.newContext({
-    viewport: { width: 1600, height: 1000 },
-    deviceScaleFactor: 1.25,
+  const timestamps = luniteComputeTicketTimestamps({
+    jenisAduanValue,
+    customDurationMinutes: ticket.customDurationMinutes,
+    waktuPenerimaan: ticket.waktuPenerimaan,
+    waktuPenyelesaian: ticket.waktuPenyelesaian,
+    timestampAnchor: ticket.timestampAnchor || "selesai",
+    randomDelta: Boolean(ticket.randomDelta),
   });
-  const page = await context.newPage();
 
-  // 1. Authenticate to Si-Pangaduan
-  console.log(
-    `[*] [Lunar] Authenticating to Si-Pangaduan as "${finalUsername}" (${finalPortalUrl})...`,
-  );
-  await page.goto(finalPortalUrl, { waitUntil: "networkidle", timeout: 15000 });
-  await page.waitForSelector("#username", { timeout: 10000 });
-  await page.fill("#username", finalUsername);
-  await page.fill("#password", finalPassword);
+  return {
+    role,
+    namaPengadu,
+    petugasValue: effectivePetugas,
+    unitValue,
+    jenisAduanValue,
+    statusValue,
+    dilanjutkanValue,
+    noRm,
+    rawIsiKomplain,
+    cleanKomplainHtml: formatKomplainToCleanHtml(rawIsiKomplain),
+    finalScreenshot,
+    waktuPenerimaan: timestamps.waktuPenerimaan,
+    waktuPenyelesaian: timestamps.waktuPenyelesaian,
+  };
+}
 
-  await Promise.allSettled([
-    page.waitForNavigation({ waitUntil: "networkidle", timeout: 10000 }),
-    page.click("#btnLogin"),
-  ]);
-
-  await page.waitForTimeout(1500);
-
-  // 2. Open Formulir
+/*
+ * Territory: lunitePopulatePortalFormOnPage — Navigates to formulir_pengaduan and fills all Si-Pangaduan fields on an active Playwright page.
+ */
+async function lunitePopulatePortalFormOnPage(page, finalPortalUrl, preparedTicket) {
   const formUrl = new URL("pangaduan/formulir_pengaduan", finalPortalUrl).href;
   console.log(`[*] [Lunar] Navigating to Formulir Pengaduan (${formUrl})...`);
   await page.goto(formUrl, { waitUntil: "networkidle" });
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1600);
 
-  // 3. Populate Fields
-  console.log(`[*] [Lunar] Setting Nama Pengadu (Pelapor): "${namaPengadu}"...`);
-  await page.fill("#vb7a", namaPengadu);
+  console.log(`[*] [Lunar] Setting Nama Pengadu (Pelapor): "${preparedTicket.namaPengadu}"...`);
+  await page.fill("#vb7a", preparedTicket.namaPengadu);
 
-  const effectivePetugas =
-    petugasValue || settings.petugasValue || finalUsername || "01229";
   console.log(
-    `[*] [Lunar] Selecting Yang Mengerjakan / Petugas IT (value: "${effectivePetugas}")...`,
+    `[*] [Lunar] Selecting Yang Mengerjakan / Petugas IT (value: "${preparedTicket.petugasValue}")...`,
   );
   await page.evaluate((val) => {
     const select = document.getElementById("profesix");
@@ -1796,9 +2434,9 @@ Rincian Perubahan:
       if (window.$) $(select).val(targetVal).trigger("change");
       else select.dispatchEvent(new Event("change", { bubbles: true }));
     }
-  }, effectivePetugas);
+  }, preparedTicket.petugasValue);
 
-  console.log(`[*] [Lunar] Selecting Dari Unit (value: ${unitValue})...`);
+  console.log(`[*] [Lunar] Selecting Dari Unit (value: ${preparedTicket.unitValue})...`);
   await page.evaluate((val) => {
     const select = document.getElementById("id_bagian_api");
     if (select) {
@@ -1806,11 +2444,9 @@ Rincian Perubahan:
       if (window.$) $(select).val(val).trigger("change");
       else select.dispatchEvent(new Event("change", { bubbles: true }));
     }
-  }, unitValue);
+  }, preparedTicket.unitValue);
 
-  console.log(
-    "[*] [Lunar] Injecting Isi Komplain (clean formatting, no **)...",
-  );
+  console.log("[*] [Lunar] Injecting Isi Komplain (clean formatting, no **)...");
   await page.evaluate((html) => {
     if (window.$ && $("#summernote1").length && $.fn.summernote) {
       $("#summernote1").summernote("code", html);
@@ -1818,13 +2454,13 @@ Rincian Perubahan:
       const ed = document.querySelector(".note-editable");
       if (ed) ed.innerHTML = html;
     }
-  }, cleanKomplainHtml);
+  }, preparedTicket.cleanKomplainHtml);
 
-  if (finalScreenshot && fs.existsSync(finalScreenshot)) {
-    console.log(`[*] [Lunar] Attaching evidence image: ${finalScreenshot}...`);
+  if (preparedTicket.finalScreenshot && fs.existsSync(preparedTicket.finalScreenshot)) {
+    console.log(`[*] [Lunar] Attaching evidence image: ${preparedTicket.finalScreenshot}...`);
     const fileInput = page.locator("#filex");
     if ((await fileInput.count()) > 0) {
-      await fileInput.setInputFiles(finalScreenshot);
+      await fileInput.setInputFiles(preparedTicket.finalScreenshot);
       console.log("[+] [Lunar] Evidence attached successfully.");
     }
   } else {
@@ -1832,7 +2468,7 @@ Rincian Perubahan:
   }
 
   console.log(
-    `[*] [Lunar] Selecting Jenis Aduan (value: ${jenisAduanValue})...`,
+    `[*] [Lunar] Selecting Jenis Aduan (value: ${preparedTicket.jenisAduanValue})...`,
   );
   await page.evaluate((val) => {
     const select = document.getElementById("jenis_aduan");
@@ -1841,54 +2477,63 @@ Rincian Perubahan:
       if (window.$) $(select).val(val).trigger("change");
       else select.dispatchEvent(new Event("change", { bubbles: true }));
     }
-  }, jenisAduanValue);
+  }, preparedTicket.jenisAduanValue);
 
-  console.log(`[*] [Lunar] Setting NO RM: "${noRm}"...`);
-  await page.fill("#vb7b", noRm);
-
-  // 4. Calculate Timestamps
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  const formatDateTime = (d) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-
-  let finalWaktuPenerimaan = waktuPenerimaan;
-  let finalWaktuPenyelesaian = waktuPenyelesaian;
-
-  if (!finalWaktuPenerimaan || !finalWaktuPenyelesaian) {
-    let baseMinutes = 60;
-    if (jenisAduanValue === "4") {
-      baseMinutes = 23 * 60 + 59; // 1439 mins
-    } else if (jenisAduanValue === "5") {
-      baseMinutes = (3 * 24 + 23) * 60 + 59; // 5759 mins
-    } else if (["6", "7", "8"].includes(jenisAduanValue)) {
-      baseMinutes = 45;
-    }
-
-    if (randomDelta) {
-      const factor = 0.85 + Math.random() * 0.15;
-      baseMinutes = Math.round(baseMinutes * factor);
-    }
-    const deltaMs = baseMinutes * 60 * 1000;
-
-    if (timestampAnchor === "selesai") {
-      const selDate = now;
-      const penDate = new Date(selDate.getTime() - deltaMs);
-      if (!finalWaktuPenyelesaian) finalWaktuPenyelesaian = formatDateTime(selDate);
-      if (!finalWaktuPenerimaan) finalWaktuPenerimaan = formatDateTime(penDate);
-    } else {
-      const penDate = now;
-      const selDate = new Date(penDate.getTime() + deltaMs);
-      if (!finalWaktuPenerimaan) finalWaktuPenerimaan = formatDateTime(penDate);
-      if (!finalWaktuPenyelesaian) finalWaktuPenyelesaian = formatDateTime(selDate);
-    }
-  }
+  console.log(`[*] [Lunar] Setting NO RM: "${preparedTicket.noRm}"...`);
+  await page.fill("#vb7b", preparedTicket.noRm);
 
   console.log(
-    `[*] [Lunar] Timestamps: Penerimaan=${finalWaktuPenerimaan}, Penyelesaian=${finalWaktuPenyelesaian}`,
+    `[*] [Lunar] Setting Status (value: ${preparedTicket.statusValue}) & Di Lanjutkan (value: "${preparedTicket.dilanjutkanValue || "-"}")...`,
+  );
+  await page.evaluate(
+    ({ statusVal, dilanjutkanVal }) => {
+      const statusSel = document.getElementById("status");
+      if (statusSel) {
+        statusSel.value = statusVal;
+        if (window.$) $(statusSel).val(statusVal).trigger("change");
+        else statusSel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (typeof window.changeHiddenInput === "function") {
+        try {
+          window.changeHiddenInput();
+        } catch (_) {}
+      }
+
+      const profesiSel = document.getElementById("profesi");
+      if (profesiSel) {
+        if (statusVal === "2") {
+          profesiSel.disabled = false;
+          if (dilanjutkanVal) {
+            let targetVal = String(dilanjutkanVal);
+            const opts = Array.from(profesiSel.options);
+            const matchByVal = opts.find((o) => o.value === targetVal);
+            if (!matchByVal) {
+              const matchByText = opts.find((o) =>
+                o.text.toLowerCase().includes(targetVal.toLowerCase()),
+              );
+              if (matchByText) targetVal = matchByText.value;
+            }
+            profesiSel.value = targetVal;
+            if (window.$) $(profesiSel).val(targetVal).trigger("change");
+            else profesiSel.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        } else {
+          profesiSel.value = "";
+          profesiSel.disabled = true;
+          if (window.$) $(profesiSel).val("").trigger("change");
+          else profesiSel.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      }
+    },
+    {
+      statusVal: preparedTicket.statusValue || "1",
+      dilanjutkanVal: preparedTicket.dilanjutkanValue || "",
+    },
   );
 
-  // Set DateRangePicker via jQuery instance
+  console.log(
+    `[*] [Lunar] Timestamps: Penerimaan=${preparedTicket.waktuPenerimaan}, Penyelesaian=${preparedTicket.waktuPenyelesaian}`,
+  );
   await page.evaluate(
     ({ penDate, selDate }) => {
       const setDrp = (sel, dateStr) => {
@@ -1910,110 +2555,95 @@ Rincian Perubahan:
       setDrp("#reservation31", selDate);
       $(".daterangepicker").hide();
     },
-    { penDate: finalWaktuPenerimaan, selDate: finalWaktuPenyelesaian },
+    {
+      penDate: preparedTicket.waktuPenerimaan,
+      selDate: preparedTicket.waktuPenyelesaian,
+    },
   );
 
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(900);
+}
 
-  // 5. Submission Mode
-  if (clickSimpan) {
-    console.log(
-      '[*] [Lunar] Auto Submit Mode: Clicking "Simpan" (#btn_save)...',
+/*
+ * Territory: luniteClickSaveAndConfirmOnPage — Clicks #btn_save and confirms SweetAlert2 modal on active page.
+ */
+async function luniteClickSaveAndConfirmOnPage(page) {
+  console.log('[*] [Lunar] Clicking "Simpan" (#btn_save)...');
+  await page.waitForSelector("#btn_save", { state: "visible", timeout: 8000 });
+  await page.click("#btn_save");
+
+  console.log('[*] [Lunar] Waiting for SweetAlert confirmation ("Ya")...');
+  try {
+    const confirmBtn = await page.waitForSelector(
+      'button.swal2-confirm:has-text("Ya"), button.swal2-confirm, .swal2-actions button:has-text("Ya")',
+      { timeout: 8000, state: "visible" },
     );
-    await page.waitForSelector("#btn_save", {
-      state: "visible",
-      timeout: 5000,
-    });
-    await page.click("#btn_save");
-
-    // Confirm SweetAlert modal: "Apa anda yakin data untuk di simpan ?" -> click "Ya"
-    console.log('[*] [Lunar] Waiting for SweetAlert confirmation ("Ya")...');
-    try {
-      const confirmBtn = await page.waitForSelector(
-        'button.swal2-confirm:has-text("Ya"), button.swal2-confirm, .swal2-actions button:has-text("Ya")',
-        { timeout: 8000, state: "visible" },
-      );
-      if (confirmBtn) {
-        console.log('[*] [Lunar] Clicking SweetAlert confirmation "Ya"...');
-        await page.waitForTimeout(300);
-        try {
-          await confirmBtn.click({ force: true });
-        } catch (_) {
-          await page.evaluate(() => {
-            const btn = document.querySelector("button.swal2-confirm");
-            if (btn) btn.click();
-          });
-        }
-      }
-    } catch (e) {
-      console.log(
-        "[!] [Lunar] SweetAlert confirmation not found or timed out:",
-        e.message,
-      );
-    }
-
-    // Wait for AJAX response or success modal (auto-closing in Si-Pangaduan)
-    try {
-      await Promise.race([
-        page.waitForResponse(
-          (res) => res.url().includes("simpan") && res.status() === 200,
-          { timeout: 8000 }
-        ),
-        page.waitForSelector(
-          ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
-          { timeout: 8000 }
-        ),
-      ]);
-    } catch (_) {}
-
-    if (!page.isClosed()) {
+    if (confirmBtn) {
+      console.log('[*] [Lunar] Clicking SweetAlert confirmation "Ya"...');
+      await page.waitForTimeout(300);
       try {
-        await page.waitForTimeout(1200);
-      } catch (_) {}
-    }
-
-    console.log(
-      "[+] [Lunar] Form successfully submitted and confirmed with SweetAlert2!",
-    );
-    try {
-      await browser.close();
-    } catch (_) {}
-    return {
-      success: true,
-      submitted: true,
-      message: "Formulir Berhasil Disimpan ke Si-Pangaduan!",
-    };
-  } else {
-    console.log(
-      '\n[!] [Lunar] REVIEW MODE: Form is fully populated. Capturing live screenshot for remote review...',
-    );
-    let reviewScreenshotBase64 = "";
-    try {
-      // Ensure clean desktop layout: eradicate sidebar & overlays, unbind AdminLTE resize bounce listeners, and expand content-wrapper
-      await page.evaluate(() => {
-        window.scrollTo(0, 0);
-
-        // 1. Unbind AdminLTE & window resize/scroll listeners so it cannot snap the sidebar back
-        if (window.$) {
-          try {
-            $(window).off("resize");
-            $(window).off("scroll");
-            $(document).off("scroll");
-            $('[data-widget="pushmenu"]').off("click");
-          } catch (_) {}
-        }
-
-        // 2. Physically remove all aside and sidebar elements from the DOM tree
-        const elementsToRemove = document.querySelectorAll(
-          'aside, .main-sidebar, .sidebar, #sidebar-overlay, .sidebar-overlay, .control-sidebar, [class*="main-sidebar"], [class*="brand-link"]'
-        );
-        elementsToRemove.forEach((el) => {
-          if (el && el.parentNode && el.tagName !== "BODY" && el.tagName !== "HTML") {
-            el.remove();
-          }
+        await confirmBtn.click({ force: true });
+      } catch (_) {
+        await page.evaluate(() => {
+          const btn = document.querySelector("button.swal2-confirm");
+          if (btn) btn.click();
         });
+      }
+    }
+  } catch (e) {
+    console.log(
+      "[!] [Lunar] SweetAlert confirmation not found or timed out:",
+      e.message,
+    );
+  }
 
-        // 3. Inject permanent override CSS to ensure zero margin collapse
+  try {
+    await Promise.race([
+      page.waitForResponse(
+        (res) => res.url().includes("simpan") && res.status() === 200,
+        { timeout: 8000 },
+      ),
+      page.waitForSelector(
+        ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
+        { timeout: 8000 },
+      ),
+    ]);
+  } catch (_) {}
+
+  if (!page.isClosed()) {
+    try {
+      await page.waitForTimeout(1000);
+    } catch (_) {}
+  }
+}
+
+/*
+ * Territory: luniteCaptureCleanFormScreenshot — Strips AdminLTE sidebar and captures crisp .content-wrapper preview image.
+ */
+async function luniteCaptureCleanFormScreenshot(page) {
+  let reviewScreenshotBase64 = "";
+  try {
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      if (window.$) {
+        try {
+          $(window).off("resize");
+          $(window).off("scroll");
+          $(document).off("scroll");
+          $('[data-widget="pushmenu"]').off("click");
+        } catch (_) {}
+      }
+
+      const elementsToRemove = document.querySelectorAll(
+        'aside, .main-sidebar, .sidebar, #sidebar-overlay, .sidebar-overlay, .control-sidebar, [class*="main-sidebar"], [class*="brand-link"]',
+      );
+      elementsToRemove.forEach((el) => {
+        if (el && el.parentNode && el.tagName !== "BODY" && el.tagName !== "HTML") {
+          el.remove();
+        }
+      });
+
+      if (!document.getElementById("lunar-clean-review-style")) {
         const style = document.createElement("style");
         style.id = "lunar-clean-review-style";
         style.innerHTML = `
@@ -2032,31 +2662,120 @@ Rincian Perubahan:
           }
         `;
         document.head.appendChild(style);
-
-        const wrapper = document.querySelector(".content-wrapper");
-        if (wrapper) {
-          wrapper.style.setProperty("margin-left", "0px", "important");
-          wrapper.style.setProperty("padding-left", "24px", "important");
-          wrapper.style.setProperty("padding-right", "24px", "important");
-          wrapper.style.setProperty("width", "100%", "important");
-        }
-      });
-      await page.waitForTimeout(300);
-
-      // 4. Capture .content-wrapper element directly to avoid fixed-element bounce
-      const contentEl = await page.$(".content-wrapper");
-      let screenshotBuffer;
-      if (contentEl) {
-        screenshotBuffer = await contentEl.screenshot();
-      } else {
-        screenshotBuffer = await page.screenshot({ fullPage: true });
       }
-      reviewScreenshotBase64 = `data:image/png;base64,${screenshotBuffer.toString("base64")}`;
-    } catch (shotErr) {
-      console.log("[!] [Lunar] Failed to capture full-page screenshot:", shotErr.message);
-    }
+
+      const wrapper = document.querySelector(".content-wrapper");
+      if (wrapper) {
+        wrapper.style.setProperty("margin-left", "0px", "important");
+        wrapper.style.setProperty("padding-left", "24px", "important");
+        wrapper.style.setProperty("padding-right", "24px", "important");
+        wrapper.style.setProperty("width", "100%", "important");
+      }
+    });
+    await page.waitForTimeout(300);
+
+    const contentEl = await page.$(".content-wrapper");
+    const screenshotBuffer = contentEl
+      ? await contentEl.screenshot()
+      : await page.screenshot({ fullPage: true });
+    reviewScreenshotBase64 = `data:image/png;base64,${screenshotBuffer.toString("base64")}`;
+  } catch (shotErr) {
+    console.log("[!] [Lunar] Failed to capture full-page screenshot:", shotErr.message);
+  }
+  return reviewScreenshotBase64;
+}
+
+export async function runDocumentationIT({
+  role = "programmer",
+  namaPengadu = CURRENT_USER,
+  petugasValue = null,
+  unitValue = "44", // Default: Inst. Rekam Medik
+  jenisAduanValue = "4", // Default: Perbaikan Aplikasi
+  statusValue = "1", // Default: 1 = Selesai, 2 = Tidak Selesai
+  dilanjutkanValue = "", // Used when statusValue === "2"
+  noRm = "-",
+  isiKomplain = "",
+  screenshotPath = null,
+  clickSimpan = false,
+  useOllama = false,
+  ollamaModel = null,
+  aiMode = null,
+  portalUrl = null,
+  portalUsername = null,
+  portalPassword = null,
+  repoPath = process.cwd(),
+  waktuPenerimaan = null,
+  waktuPenyelesaian = null,
+  timestampAnchor = "selesai",
+  randomDelta = false,
+  customDurationMinutes = null,
+  isWeb = false,
+} = {}) {
+  console.log("\n======================================================");
+  console.log("         🌙 LUNAR IT DOCUMENTATION AUTOMATION");
+  console.log("======================================================\n");
+
+  const settings = getEffectiveSettings();
+  const finalPortalUrl =
+    portalUrl || settings.portalUrl || "http://192.168.0.152/it/";
+  const finalUsername = portalUsername || settings.portalUsername || "01229";
+  const finalPassword = portalPassword || settings.portalPassword || "123456";
+
+  const preparedTicket = await lunitePrepareTicketPayload(
+    {
+      role,
+      namaPengadu,
+      petugasValue,
+      unitValue,
+      jenisAduanValue,
+      statusValue,
+      dilanjutkanValue,
+      noRm,
+      isiKomplain,
+      screenshotPath,
+      useOllama,
+      ollamaModel,
+      aiMode,
+      portalUsername: finalUsername,
+      repoPath,
+      waktuPenerimaan,
+      waktuPenyelesaian,
+      timestampAnchor,
+      randomDelta,
+      customDurationMinutes,
+    },
+    settings,
+  );
+
+  const { browser, context, page } = await luniteCreateAuthenticatedPortalPage({
+    portalUrl: finalPortalUrl,
+    portalUsername: finalUsername,
+    portalPassword: finalPassword,
+  });
+
+  await lunitePopulatePortalFormOnPage(page, finalPortalUrl, preparedTicket);
+
+  if (clickSimpan) {
+    await luniteClickSaveAndConfirmOnPage(page);
+    console.log(
+      "[+] [Lunar] Form successfully submitted and confirmed with SweetAlert2!",
+    );
+    try {
+      await browser.close();
+    } catch (_) {}
+    return {
+      success: true,
+      submitted: true,
+      message: "Formulir Berhasil Disimpan ke Si-Pangaduan!",
+    };
+  } else {
+    console.log(
+      '\n[!] [Lunar] REVIEW MODE: Form is fully populated. Capturing live screenshot for remote review...',
+    );
+    const reviewScreenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
 
     await lunarCloseReviewSession();
+    await luniteCloseBatchReviewSession();
 
     lunarActiveReviewSession = {
       browser,
@@ -2064,13 +2783,15 @@ Rincian Perubahan:
       page,
       createdAt: Date.now(),
       meta: {
-        namaPengadu,
-        petugasValue: effectivePetugas,
-        unitValue,
-        jenisAduanValue,
-        noRm,
-        waktuPenerimaan: finalWaktuPenerimaan,
-        waktuPenyelesaian: finalWaktuPenyelesaian,
+        namaPengadu: preparedTicket.namaPengadu,
+        petugasValue: preparedTicket.petugasValue,
+        unitValue: preparedTicket.unitValue,
+        jenisAduanValue: preparedTicket.jenisAduanValue,
+        statusValue: preparedTicket.statusValue,
+        dilanjutkanValue: preparedTicket.dilanjutkanValue,
+        noRm: preparedTicket.noRm,
+        waktuPenerimaan: preparedTicket.waktuPenerimaan,
+        waktuPenyelesaian: preparedTicket.waktuPenyelesaian,
       },
       timeoutId: setTimeout(() => {
         console.log("[*] [Lunar] Review session timed out (15m). Closing browser...");
@@ -2111,7 +2832,7 @@ export async function lunarConfirmReviewSubmit() {
     );
   }
 
-  const { page, browser, timeoutId } = lunarActiveReviewSession;
+  const { page, timeoutId } = lunarActiveReviewSession;
   if (timeoutId) clearTimeout(timeoutId);
 
   if (page.isClosed()) {
@@ -2119,62 +2840,226 @@ export async function lunarConfirmReviewSubmit() {
     return { success: true, message: "Browser telah ditutup/disimpan sebelumnya." };
   }
 
-  console.log('[*] [Lunar] Remote Submit Confirmation: Clicking "Simpan" (#btn_save)...');
-  await page.waitForSelector("#btn_save", { state: "visible", timeout: 8000 });
-  await page.click("#btn_save");
-
-  // Confirm SweetAlert modal: "Apa anda yakin data untuk di simpan ?" -> click "Ya"
-  console.log('[*] [Lunar] Waiting for SweetAlert confirmation ("Ya")...');
-  try {
-    const confirmBtn = await page.waitForSelector(
-      'button.swal2-confirm:has-text("Ya"), button.swal2-confirm, .swal2-actions button:has-text("Ya")',
-      { timeout: 8000, state: "visible" },
-    );
-    if (confirmBtn) {
-      console.log('[*] [Lunar] Clicking SweetAlert confirmation "Ya"...');
-      await page.waitForTimeout(300);
-      try {
-        await confirmBtn.click({ force: true });
-      } catch (_) {
-        await page.evaluate(() => {
-          const btn = document.querySelector("button.swal2-confirm");
-          if (btn) btn.click();
-        });
-      }
-    }
-  } catch (e) {
-    console.log(
-      "[!] [Lunar] SweetAlert confirmation not found or timed out:",
-      e.message,
-    );
-  }
-
-  // Wait for AJAX response or success modal (auto-closing in Si-Pangaduan)
-  try {
-    await Promise.race([
-      page.waitForResponse(
-        (res) => res.url().includes("simpan") && res.status() === 200,
-        { timeout: 8000 }
-      ),
-      page.waitForSelector(
-        ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
-        { timeout: 8000 }
-      ),
-    ]);
-  } catch (_) {}
-
-  if (!page.isClosed()) {
-    try {
-      await page.waitForTimeout(1200);
-    } catch (_) {}
-  }
-
+  await luniteClickSaveAndConfirmOnPage(page);
   console.log(
     "[+] [Lunar] Form successfully submitted and confirmed via remote trigger!",
   );
 
   await lunarCloseReviewSession();
   return { success: true, message: "Formulir Berhasil Disimpan ke Si-Pangaduan!" };
+}
+
+/*
+ * Territory: luniteRunBatchDocumentationIT — Runs multiple reports using a single authenticated Playwright session (auto-submit or batch review).
+ */
+export async function luniteRunBatchDocumentationIT({
+  items = [],
+  clickSimpan = false,
+  portalUrl = null,
+  portalUsername = null,
+  portalPassword = null,
+} = {}) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error("Antrean laporan kosong. Tambahkan minimal 1 laporan ke antrean.");
+  }
+
+  console.log("\n======================================================");
+  console.log(`   🌙 LUNAR BATCH AUTOMATION (${items.length} LAPORAN)`);
+  console.log("======================================================\n");
+
+  const settings = getEffectiveSettings();
+  const finalPortalUrl =
+    portalUrl || settings.portalUrl || "http://192.168.0.152/it/";
+  const finalUsername = portalUsername || settings.portalUsername || "01229";
+  const finalPassword = portalPassword || settings.portalPassword || "123456";
+
+  await lunarCloseReviewSession();
+  await luniteCloseBatchReviewSession();
+
+  const preparedItems = [];
+  for (let i = 0; i < items.length; i++) {
+    const rawItem = items[i] || {};
+    const prepared = await lunitePrepareTicketPayload(
+      { ...rawItem, portalUsername: finalUsername },
+      settings,
+    );
+    preparedItems.push({
+      id: rawItem.id || `batch_${i + 1}`,
+      title: rawItem.title || `Laporan #${i + 1}`,
+      prepared,
+    });
+  }
+
+  const { browser, context, page } = await luniteCreateAuthenticatedPortalPage({
+    portalUrl: finalPortalUrl,
+    portalUsername: finalUsername,
+    portalPassword: finalPassword,
+  });
+
+  if (clickSimpan) {
+    const results = [];
+    for (let i = 0; i < preparedItems.length; i++) {
+      const entry = preparedItems[i];
+      console.log(`[*] [Lunar Batch] Submitting item ${i + 1}/${preparedItems.length}: ${entry.title}`);
+      try {
+        await lunitePopulatePortalFormOnPage(page, finalPortalUrl, entry.prepared);
+        await luniteClickSaveAndConfirmOnPage(page);
+        results.push({
+          index: i,
+          id: entry.id,
+          title: entry.title,
+          success: true,
+          meta: {
+            namaPengadu: entry.prepared.namaPengadu,
+            petugasValue: entry.prepared.petugasValue,
+            unitValue: entry.prepared.unitValue,
+            jenisAduanValue: entry.prepared.jenisAduanValue,
+            statusValue: entry.prepared.statusValue,
+            dilanjutkanValue: entry.prepared.dilanjutkanValue,
+            noRm: entry.prepared.noRm,
+            waktuPenerimaan: entry.prepared.waktuPenerimaan,
+            waktuPenyelesaian: entry.prepared.waktuPenyelesaian,
+          },
+        });
+      } catch (err) {
+        console.error(`[!] [Lunar Batch] Item ${i + 1} failed:`, err.message);
+        results.push({
+          index: i,
+          id: entry.id,
+          title: entry.title,
+          success: false,
+          error: err.message,
+        });
+      }
+    }
+
+    try {
+      await browser.close();
+    } catch (_) {}
+
+    const succeeded = results.filter((r) => r.success).length;
+    const failed = results.length - succeeded;
+    return {
+      success: failed === 0,
+      submitted: true,
+      batchMode: true,
+      total: results.length,
+      succeeded,
+      failed,
+      results,
+      message: `${succeeded}/${results.length} laporan berhasil dikirim ke Si-Pangaduan!`,
+    };
+  } else {
+    const previews = [];
+    for (let i = 0; i < preparedItems.length; i++) {
+      const entry = preparedItems[i];
+      console.log(`[*] [Lunar Batch Review] Capturing preview ${i + 1}/${preparedItems.length}: ${entry.title}`);
+      await lunitePopulatePortalFormOnPage(page, finalPortalUrl, entry.prepared);
+      const screenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
+      previews.push({
+        index: i,
+        id: entry.id,
+        title: entry.title,
+        screenshotBase64,
+        meta: {
+          namaPengadu: entry.prepared.namaPengadu,
+          petugasValue: entry.prepared.petugasValue,
+          unitValue: entry.prepared.unitValue,
+          jenisAduanValue: entry.prepared.jenisAduanValue,
+          statusValue: entry.prepared.statusValue,
+          dilanjutkanValue: entry.prepared.dilanjutkanValue,
+          noRm: entry.prepared.noRm,
+          waktuPenerimaan: entry.prepared.waktuPenerimaan,
+          waktuPenyelesaian: entry.prepared.waktuPenyelesaian,
+        },
+      });
+    }
+
+    luniteActiveBatchReviewSession = {
+      browser,
+      context,
+      page,
+      finalPortalUrl,
+      preparedItems,
+      createdAt: Date.now(),
+      timeoutId: setTimeout(() => {
+        console.log("[*] [Lunar] Batch review session timed out (15m). Closing browser...");
+        luniteCloseBatchReviewSession();
+      }, 15 * 60 * 1000),
+    };
+
+    page.on("close", () => {
+      console.log("[*] [Lunar] Batch review browser window was closed.");
+      luniteActiveBatchReviewSession = null;
+    });
+
+    return {
+      success: true,
+      batchReviewMode: true,
+      total: previews.length,
+      previews,
+      message: `${previews.length} formulir batch siap diperiksa sebelum dikirim.`,
+    };
+  }
+}
+
+/*
+ * Territory: luniteConfirmBatchReviewSubmit — Submits all staged items using the already-authenticated batch review browser session.
+ */
+export async function luniteConfirmBatchReviewSubmit() {
+  if (!luniteActiveBatchReviewSession || !luniteActiveBatchReviewSession.page) {
+    throw new Error(
+      "Tidak ada sesi review batch yang aktif atau sesi telah kadaluarsa (timeout 15 menit). Silakan ulangi Review Batch.",
+    );
+  }
+
+  const { page, finalPortalUrl, preparedItems, timeoutId } = luniteActiveBatchReviewSession;
+  if (timeoutId) clearTimeout(timeoutId);
+
+  if (page.isClosed()) {
+    await luniteCloseBatchReviewSession();
+    throw new Error("Jendela browser review batch sudah ditutup.");
+  }
+
+  const results = [];
+  for (let i = 0; i < preparedItems.length; i++) {
+    const entry = preparedItems[i];
+    console.log(`[*] [Lunar Batch Confirm] Submitting item ${i + 1}/${preparedItems.length}: ${entry.title}`);
+    try {
+      // Last item is already populated unless user switched; repopulate cleanly to guarantee exact state
+      await lunitePopulatePortalFormOnPage(page, finalPortalUrl, entry.prepared);
+      await luniteClickSaveAndConfirmOnPage(page);
+      results.push({
+        index: i,
+        id: entry.id,
+        title: entry.title,
+        success: true,
+      });
+    } catch (err) {
+      console.error(`[!] [Lunar Batch Confirm] Item ${i + 1} failed:`, err.message);
+      results.push({
+        index: i,
+        id: entry.id,
+        title: entry.title,
+        success: false,
+        error: err.message,
+      });
+    }
+  }
+
+  await luniteCloseBatchReviewSession();
+  const succeeded = results.filter((r) => r.success).length;
+  const failed = results.length - succeeded;
+
+  return {
+    success: failed === 0,
+    submitted: true,
+    total: results.length,
+    succeeded,
+    failed,
+    results,
+    message: `${succeeded}/${results.length} laporan batch berhasil disimpan ke Si-Pangaduan!`,
+  };
 }
 
 function discoverSiblingProjects(basePath) {
@@ -2243,11 +3128,10 @@ export function startDocumentationServer({
     }, 150);
   };
 
+  // Watch only UI static assets so runtime JSON saves (settings, templates, options)
+  // update in-place without forcing a full HTML page reload.
   const lunarWatchTargets = [
     path.resolve(__dirname, "ui"),
-    path.resolve(__dirname, "it_templates.json"),
-    path.resolve(__dirname, "portal_options.json"),
-    path.resolve(__dirname, "lunar_settings.json"),
   ];
 
   const lunarFileWatchers = [];
@@ -2530,6 +3414,7 @@ export function startDocumentationServer({
         } else if (body && body.title) {
           const newId = body.id || "tpl_" + Date.now();
           const existingIdx = currentTemplates.findIndex((t) => t.id === newId);
+          const parsedDuration = Number(body.durationMinutes);
           const tplObj = {
             id: newId,
             icon: body.icon || "📝",
@@ -2540,6 +3425,15 @@ export function startDocumentationServer({
             jenisValue: body.jenisValue,
             jenisName: body.jenisName || "",
             text: body.text || "",
+            durationMinutes:
+              Number.isFinite(parsedDuration) && parsedDuration > 0
+                ? Math.round(parsedDuration)
+                : null,
+            durationMode: body.durationMode === "follow_global" ? "follow_global" : "strict_100",
+            timestampAnchor:
+              body.timestampAnchor === "selesai" || body.timestampAnchor === "terima"
+                ? body.timestampAnchor
+                : null,
           };
           if (existingIdx >= 0) {
             currentTemplates[existingIdx] = tplObj;
@@ -2840,14 +3734,14 @@ Rincian Pekerjaan:
       return;
     }
 
-    // 5b. Analyze Image Endpoint (IT Support & Programmer)
+    // 5b. Analyze Image / Context Fusion Endpoint (IT Support & Programmer)
     if (req.method === "POST" && url.pathname === "/api/analyze-image") {
       const body = await readBody();
       const settings = getEffectiveSettings();
       try {
         const result = await analyzeSupportEvidenceImage({
-          imageBase64: body.imageBase64,
-          imagePath: body.imagePath,
+          imageBase64: body.imageBase64 || null,
+          imagePath: body.imagePath || null,
           fileName:
             body.fileName ||
             (body.role === "programmer"
@@ -2855,6 +3749,8 @@ Rincian Pekerjaan:
               : "evidence_support.png"),
           unitValue: body.unitValue,
           jenisAduanValue: body.jenisAduanValue,
+          complaintContext: body.complaintContext || "",
+          solutionHint: body.solutionHint || "",
           apiKey: body.apiKey || settings.geminiApiKey,
           role: body.role || "it_support",
           aiMode: body.aiMode || settings.aiMode,
@@ -2863,8 +3759,35 @@ Rincian Pekerjaan:
         });
         sendJson(result);
       } catch (err) {
-        console.error("[!] [Lunar] Error analyzing image:", err);
+        console.error("[!] [Lunar] Error analyzing image/context:", err);
         sendJson({ success: false, error: err.message }, 500);
+      }
+      return;
+    }
+
+    // 5b-2. Safe Evidence Preview Stream Endpoint (for Batch Queue thumbnails)
+    if (req.method === "GET" && url.pathname === "/api/evidence-preview") {
+      const fileParam = url.searchParams.get("file");
+      if (!fileParam) {
+        res.writeHead(400);
+        res.end("Missing file parameter");
+        return;
+      }
+      const safeName = path.basename(fileParam);
+      const targetFile = path.resolve(process.cwd(), "evidence", safeName);
+      if (fs.existsSync(targetFile)) {
+        const ext = path.extname(safeName).toLowerCase();
+        const mime =
+          ext === ".jpg" || ext === ".jpeg"
+            ? "image/jpeg"
+            : ext === ".webp"
+              ? "image/webp"
+              : "image/png";
+        res.writeHead(200, { "Content-Type": mime });
+        res.end(fs.readFileSync(targetFile));
+      } else {
+        res.writeHead(404);
+        res.end("Evidence not found");
       }
       return;
     }
@@ -2944,6 +3867,8 @@ Rincian Pekerjaan:
           petugasValue: body.petugasValue,
           unitValue: body.unitValue,
           jenisAduanValue: body.jenisAduanValue,
+          statusValue: body.statusValue || "1",
+          dilanjutkanValue: body.dilanjutkanValue || "",
           noRm: body.noRm || "-",
           isiKomplain: body.isiKomplain,
           screenshotPath: body.screenshotPath,
@@ -2955,6 +3880,7 @@ Rincian Pekerjaan:
           waktuPenyelesaian: body.waktuPenyelesaian,
           timestampAnchor: body.timestampAnchor || "selesai",
           randomDelta: !!body.randomDelta,
+          customDurationMinutes: body.customDurationMinutes || null,
           isWeb: true,
         });
 
@@ -2964,6 +3890,28 @@ Rincian Pekerjaan:
         });
       } catch (err) {
         console.error("[!] Error in /api/submit:", err);
+        sendJson({ success: false, error: err.message }, 500);
+      }
+      return;
+    }
+
+    // 6b. Batch Submit to Si-Pangaduan Endpoint (Single-Login Multiple Reports)
+    if (req.method === "POST" && url.pathname === "/api/submit-batch") {
+      const body = await readBody();
+      try {
+        const result = await luniteRunBatchDocumentationIT({
+          items: Array.isArray(body.items) ? body.items : [],
+          clickSimpan: Boolean(body.clickSimpan),
+          portalUrl: body.portalUrl || null,
+          portalUsername: body.portalUsername || null,
+          portalPassword: body.portalPassword || null,
+        });
+        sendJson({
+          success: true,
+          ...result,
+        });
+      } catch (err) {
+        console.error("[!] Error in /api/submit-batch:", err);
         sendJson({ success: false, error: err.message }, 500);
       }
       return;
@@ -2981,10 +3929,23 @@ Rincian Pekerjaan:
       return;
     }
 
+    // 7b. Confirm Batch Review Submit Endpoint
+    if (req.method === "POST" && url.pathname === "/api/confirm-batch-submit") {
+      try {
+        const result = await luniteConfirmBatchReviewSubmit();
+        sendJson({ success: true, ...result });
+      } catch (err) {
+        console.error("[!] Error in /api/confirm-batch-submit:", err);
+        sendJson({ success: false, error: err.message }, 500);
+      }
+      return;
+    }
+
     // 8. Cancel Review Endpoint
     if (req.method === "POST" && url.pathname === "/api/cancel-review") {
       try {
         await lunarCloseReviewSession();
+        await luniteCloseBatchReviewSession();
         sendJson({ success: true, message: "Sesi review berhasil dibatalkan." });
       } catch (err) {
         sendJson({ success: false, error: err.message }, 500);
