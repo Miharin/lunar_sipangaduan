@@ -2565,6 +2565,103 @@ async function lunitePopulatePortalFormOnPage(page, finalPortalUrl, preparedTick
 }
 
 /*
+ * Territory: luniteReadSwalAlertState — Reads visible SweetAlert2 status and message from active page.
+ */
+async function luniteReadSwalAlertState(page) {
+  return await page.evaluate(() => {
+    const popup = document.querySelector(".swal2-popup");
+    if (!popup || window.getComputedStyle(popup).display === "none") {
+      return { visible: false, isSuccess: false, isError: false, message: "" };
+    }
+    const isSuccess = Boolean(
+      popup.querySelector(".swal2-success, .swal2-icon-success") ||
+        popup.classList.contains("swal2-icon-success"),
+    );
+    const isError = Boolean(
+      popup.querySelector(
+        ".swal2-error, .swal2-icon-error, .swal2-warning, .swal2-icon-warning",
+      ) ||
+        popup.classList.contains("swal2-icon-error") ||
+        popup.classList.contains("swal2-icon-warning"),
+    );
+    const titleEl = popup.querySelector(".swal2-title");
+    const htmlEl =
+      popup.querySelector(".swal2-html-container") ||
+      popup.querySelector("#swal2-content");
+    const parts = [
+      titleEl ? titleEl.textContent.trim() : "",
+      htmlEl ? htmlEl.textContent.trim() : "",
+    ].filter(Boolean);
+    return {
+      visible: true,
+      isSuccess,
+      isError,
+      message: parts.join(" — ") || "Validasi portal gagal.",
+    };
+  });
+}
+
+/*
+ * Territory: luniteDismissSwalAlertIfVisible — Dismisses visible SweetAlert2 popup via its confirm button.
+ */
+async function luniteDismissSwalAlertIfVisible(page) {
+  try {
+    await page.evaluate(() => {
+      const btn = document.querySelector(".swal2-popup button.swal2-confirm");
+      if (btn) btn.click();
+    });
+    await page.waitForTimeout(250);
+  } catch (_) {}
+}
+
+/*
+ * Territory: luniteCaptureReviewCaptchaOnPage — Captures #captcha_img screenshot when CAPTCHA gate is present.
+ */
+async function luniteCaptureReviewCaptchaOnPage(page) {
+  try {
+    const inputCount = await page.locator("#captcha_code").count();
+    const imgLoc = page.locator("#captcha_img");
+    const imgCount = await imgLoc.count();
+    if (inputCount === 0 || imgCount === 0) {
+      return { hasCaptcha: false, captchaBase64: "" };
+    }
+
+    await imgLoc.scrollIntoViewIfNeeded().catch(() => {});
+    await page
+      .waitForFunction(
+        () => {
+          const img = document.getElementById("captcha_img");
+          return Boolean(img && img.complete && img.naturalWidth > 0);
+        },
+        { timeout: 6000 },
+      )
+      .catch(() => {});
+
+    const imgBuffer = await imgLoc.screenshot();
+    return {
+      hasCaptcha: true,
+      captchaBase64: `data:image/png;base64,${imgBuffer.toString("base64")}`,
+    };
+  } catch (err) {
+    console.log("[!] [Lunar] Failed to capture CAPTCHA image:", err.message);
+    return { hasCaptcha: false, captchaBase64: "" };
+  }
+}
+
+/*
+ * Territory: luniteCreatePortalValidationError — Builds a retryable validation error carrying refreshed CAPTCHA state.
+ */
+async function luniteCreatePortalValidationError(page, message) {
+  const err = new Error(message || "Validasi portal gagal. Silakan periksa kembali.");
+  err.isPortalValidationError = true;
+  const captchaState = await luniteCaptureReviewCaptchaOnPage(page);
+  err.hasCaptcha = captchaState.hasCaptcha;
+  err.captchaBase64 = captchaState.captchaBase64;
+  err.screenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
+  return err;
+}
+
+/*
  * Territory: luniteClickSaveAndConfirmOnPage — Clicks #btn_save and confirms SweetAlert2 modal on active page.
  */
 async function luniteClickSaveAndConfirmOnPage(page) {
@@ -2578,6 +2675,11 @@ async function luniteClickSaveAndConfirmOnPage(page) {
       'button.swal2-confirm:has-text("Ya"), button.swal2-confirm, .swal2-actions button:has-text("Ya")',
       { timeout: 8000, state: "visible" },
     );
+    const preAlert = await luniteReadSwalAlertState(page);
+    if (preAlert.visible && preAlert.isError) {
+      await luniteDismissSwalAlertIfVisible(page);
+      throw await luniteCreatePortalValidationError(page, preAlert.message);
+    }
     if (confirmBtn) {
       console.log('[*] [Lunar] Clicking SweetAlert confirmation "Ya"...');
       await page.waitForTimeout(300);
@@ -2591,30 +2693,153 @@ async function luniteClickSaveAndConfirmOnPage(page) {
       }
     }
   } catch (e) {
+    if (e.isPortalValidationError) throw e;
     console.log(
       "[!] [Lunar] SweetAlert confirmation not found or timed out:",
       e.message,
     );
   }
 
+  let simpanResponsePayload = null;
   try {
-    await Promise.race([
-      page.waitForResponse(
-        (res) => res.url().includes("simpan") && res.status() === 200,
-        { timeout: 8000 },
-      ),
-      page.waitForSelector(
-        ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
-        { timeout: 8000 },
-      ),
+    const [matchedResp] = await Promise.all([
+      page
+        .waitForResponse((res) => res.url().includes("simpan"), { timeout: 8000 })
+        .catch(() => null),
+      Promise.race([
+        page.waitForSelector(
+          ".swal2-success, .swal2-icon-success, text='Your work has been saved'",
+          { timeout: 8000 },
+        ),
+        page.waitForSelector(
+          ".swal2-error, .swal2-icon-error, .swal2-warning, .swal2-icon-warning",
+          { timeout: 8000 },
+        ),
+      ]).catch(() => null),
     ]);
+    if (matchedResp) {
+      try {
+        simpanResponsePayload = await matchedResp.json();
+      } catch (_) {}
+    }
   } catch (_) {}
 
   if (!page.isClosed()) {
     try {
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(600);
+    } catch (_) {}
+
+    const postAlert = await luniteReadSwalAlertState(page);
+    if (postAlert.visible && postAlert.isError) {
+      await luniteDismissSwalAlertIfVisible(page);
+      throw await luniteCreatePortalValidationError(page, postAlert.message);
+    }
+
+    if (
+      simpanResponsePayload &&
+      (simpanResponsePayload.status === false ||
+        simpanResponsePayload.success === false)
+    ) {
+      const msg =
+        simpanResponsePayload.message ||
+        simpanResponsePayload.msg ||
+        "Portal menolak penyimpanan formulir.";
+      await luniteDismissSwalAlertIfVisible(page);
+      throw await luniteCreatePortalValidationError(page, msg);
+    }
+
+    try {
+      await page.waitForTimeout(400);
     } catch (_) {}
   }
+}
+
+/*
+ * Territory: luniteFillCaptchaAndSubmitOnPage — Applies human-entered #captcha_code when required and triggers submission.
+ */
+async function luniteFillCaptchaAndSubmitOnPage(page, captchaCode = "") {
+  const hasCaptchaInput = (await page.locator("#captcha_code").count()) > 0;
+  if (hasCaptchaInput) {
+    const cleanCode = String(captchaCode || "").trim().toUpperCase();
+    if (!cleanCode) {
+      throw await luniteCreatePortalValidationError(
+        page,
+        "Kode verifikasi CAPTCHA wajib diisi terlebih dahulu.",
+      );
+    }
+    console.log("[*] [Lunar] Filling user-entered #captcha_code on active page...");
+    await page.fill("#captcha_code", cleanCode);
+    await page.evaluate((val) => {
+      const input = document.getElementById("captcha_code");
+      if (input) {
+        input.value = val;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }, cleanCode);
+  }
+  await luniteClickSaveAndConfirmOnPage(page);
+}
+
+/*
+ * Territory: luniteRefreshActiveReviewCaptcha — Reloads #captcha_img on whichever remote review session is currently active.
+ */
+export async function luniteRefreshActiveReviewCaptcha() {
+  const session = lunarActiveReviewSession || luniteActiveBatchReviewSession;
+  if (!session || !session.page || session.page.isClosed()) {
+    throw new Error(
+      "Tidak ada sesi review aktif untuk memuat ulang CAPTCHA. Silakan buka kembali Review Mode.",
+    );
+  }
+
+  const page = session.page;
+  const previousSrc = await page.evaluate(() => {
+    const img = document.getElementById("captcha_img");
+    return img ? img.getAttribute("src") || img.src || "" : "";
+  });
+
+  await page.evaluate(() => {
+    const input = document.getElementById("captcha_code");
+    if (input) input.value = "";
+    const refreshBtn = document.querySelector('button[onclick*="refreshCaptcha"]');
+    if (refreshBtn) {
+      refreshBtn.click();
+    } else if (typeof window.refreshCaptcha === "function") {
+      window.refreshCaptcha();
+    } else {
+      const img = document.getElementById("captcha_img");
+      if (img) {
+        const base = (img.src || "").split("?")[0];
+        img.src = `${base}?t=${Date.now()}`;
+      }
+    }
+  });
+
+  await page
+    .waitForFunction(
+      (prevSrc) => {
+        const img = document.getElementById("captcha_img");
+        if (!img) return false;
+        const currSrc = img.getAttribute("src") || img.src || "";
+        return (
+          currSrc !== prevSrc && img.complete && img.naturalWidth > 0
+        );
+      },
+      previousSrc,
+      { timeout: 6000 },
+    )
+    .catch(() => {});
+
+  await page.waitForTimeout(250);
+  const captchaState = await luniteCaptureReviewCaptchaOnPage(page);
+  const screenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
+
+  return {
+    success: true,
+    hasCaptcha: captchaState.hasCaptcha,
+    captchaBase64: captchaState.captchaBase64,
+    screenshotBase64,
+  };
 }
 
 /*
@@ -2773,6 +2998,7 @@ export async function runDocumentationIT({
       '\n[!] [Lunar] REVIEW MODE: Form is fully populated. Capturing live screenshot for remote review...',
     );
     const reviewScreenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
+    const captchaState = await luniteCaptureReviewCaptchaOnPage(page);
 
     await lunarCloseReviewSession();
     await luniteCloseBatchReviewSession();
@@ -2813,6 +3039,8 @@ export async function runDocumentationIT({
         success: true,
         reviewMode: true,
         screenshotBase64: reviewScreenshotBase64,
+        hasCaptcha: captchaState.hasCaptcha,
+        captchaBase64: captchaState.captchaBase64,
         meta: lunarActiveReviewSession.meta,
         message: "Formulir siap diperiksa di layar.",
       };
@@ -2825,7 +3053,7 @@ export async function runDocumentationIT({
   }
 }
 
-export async function lunarConfirmReviewSubmit() {
+export async function lunarConfirmReviewSubmit({ captchaCode = "" } = {}) {
   if (!lunarActiveReviewSession || !lunarActiveReviewSession.page) {
     throw new Error(
       "Tidak ada sesi review yang aktif atau sesi telah kadaluarsa (timeout 15 menit). Silakan muat ulang formulir."
@@ -2840,7 +3068,18 @@ export async function lunarConfirmReviewSubmit() {
     return { success: true, message: "Browser telah ditutup/disimpan sebelumnya." };
   }
 
-  await luniteClickSaveAndConfirmOnPage(page);
+  try {
+    await luniteFillCaptchaAndSubmitOnPage(page, captchaCode);
+  } catch (err) {
+    if (err.isPortalValidationError && lunarActiveReviewSession && !page.isClosed()) {
+      lunarActiveReviewSession.timeoutId = setTimeout(() => {
+        console.log("[*] [Lunar] Review session timed out (15m). Closing browser...");
+        lunarCloseReviewSession();
+      }, 15 * 60 * 1000);
+    }
+    throw err;
+  }
+
   console.log(
     "[+] [Lunar] Form successfully submitted and confirmed via remote trigger!",
   );
@@ -2975,12 +3214,21 @@ export async function luniteRunBatchDocumentationIT({
       });
     }
 
+    if (preparedItems.length > 1) {
+      console.log(`[*] [Lunar Batch Review] Aligning live page to item 1/${preparedItems.length} for CAPTCHA verification...`);
+      await lunitePopulatePortalFormOnPage(page, finalPortalUrl, preparedItems[0].prepared);
+      previews[0].screenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
+    }
+    const initialCaptchaState = await luniteCaptureReviewCaptchaOnPage(page);
+
     luniteActiveBatchReviewSession = {
       browser,
       context,
       page,
       finalPortalUrl,
       preparedItems,
+      currentIndex: 0,
+      results: [],
       createdAt: Date.now(),
       timeoutId: setTimeout(() => {
         console.log("[*] [Lunar] Batch review session timed out (15m). Closing browser...");
@@ -2997,16 +3245,19 @@ export async function luniteRunBatchDocumentationIT({
       success: true,
       batchReviewMode: true,
       total: previews.length,
+      currentIndex: 0,
       previews,
+      hasCaptcha: initialCaptchaState.hasCaptcha,
+      captchaBase64: initialCaptchaState.captchaBase64,
       message: `${previews.length} formulir batch siap diperiksa sebelum dikirim.`,
     };
   }
 }
 
 /*
- * Territory: luniteConfirmBatchReviewSubmit — Submits all staged items using the already-authenticated batch review browser session.
+ * Territory: luniteConfirmBatchReviewSubmit — Submits staged batch items step-by-step when CAPTCHA is active, or all remaining when absent.
  */
-export async function luniteConfirmBatchReviewSubmit() {
+export async function luniteConfirmBatchReviewSubmit({ captchaCode = "" } = {}) {
   if (!luniteActiveBatchReviewSession || !luniteActiveBatchReviewSession.page) {
     throw new Error(
       "Tidak ada sesi review batch yang aktif atau sesi telah kadaluarsa (timeout 15 menit). Silakan ulangi Review Batch.",
@@ -3021,12 +3272,85 @@ export async function luniteConfirmBatchReviewSubmit() {
     throw new Error("Jendela browser review batch sudah ditutup.");
   }
 
-  const results = [];
-  for (let i = 0; i < preparedItems.length; i++) {
+  const currentIndex = luniteActiveBatchReviewSession.currentIndex || 0;
+  const hasCaptchaOnPage = (await page.locator("#captcha_code").count()) > 0;
+
+  if (hasCaptchaOnPage) {
+    const entry = preparedItems[currentIndex];
+    if (!entry) {
+      await luniteCloseBatchReviewSession();
+      throw new Error("Indeks item batch di luar batas.");
+    }
+
+    console.log(`[*] [Lunar Batch Confirm] Submitting item ${currentIndex + 1}/${preparedItems.length}: ${entry.title}`);
+    try {
+      await luniteFillCaptchaAndSubmitOnPage(page, captchaCode);
+    } catch (err) {
+      if (err.isPortalValidationError && luniteActiveBatchReviewSession && !page.isClosed()) {
+        luniteActiveBatchReviewSession.timeoutId = setTimeout(() => {
+          console.log("[*] [Lunar] Batch review session timed out (15m). Closing browser...");
+          luniteCloseBatchReviewSession();
+        }, 15 * 60 * 1000);
+      }
+      throw err;
+    }
+
+    luniteActiveBatchReviewSession.results.push({
+      index: currentIndex,
+      id: entry.id,
+      title: entry.title,
+      success: true,
+    });
+
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < preparedItems.length) {
+      luniteActiveBatchReviewSession.currentIndex = nextIndex;
+      const nextEntry = preparedItems[nextIndex];
+      console.log(`[*] [Lunar Batch Confirm] Preparing next item ${nextIndex + 1}/${preparedItems.length}: ${nextEntry.title}`);
+      await lunitePopulatePortalFormOnPage(page, finalPortalUrl, nextEntry.prepared);
+      const nextScreenshotBase64 = await luniteCaptureCleanFormScreenshot(page);
+      const nextCaptchaState = await luniteCaptureReviewCaptchaOnPage(page);
+
+      luniteActiveBatchReviewSession.timeoutId = setTimeout(() => {
+        console.log("[*] [Lunar] Batch review session timed out (15m). Closing browser...");
+        luniteCloseBatchReviewSession();
+      }, 15 * 60 * 1000);
+
+      return {
+        success: true,
+        batchCompleted: false,
+        submittedIndex: currentIndex,
+        nextIndex,
+        total: preparedItems.length,
+        results: [...luniteActiveBatchReviewSession.results],
+        screenshotBase64: nextScreenshotBase64,
+        hasCaptcha: nextCaptchaState.hasCaptcha,
+        captchaBase64: nextCaptchaState.captchaBase64,
+        message: `Laporan #${currentIndex + 1} berhasil disimpan. Lanjutkan verifikasi CAPTCHA untuk Laporan #${nextIndex + 1}/${preparedItems.length}.`,
+      };
+    }
+
+    const finalResults = [...luniteActiveBatchReviewSession.results];
+    await luniteCloseBatchReviewSession();
+    const succeeded = finalResults.filter((r) => r.success).length;
+    const failed = finalResults.length - succeeded;
+    return {
+      success: failed === 0,
+      batchCompleted: true,
+      submitted: true,
+      total: finalResults.length,
+      succeeded,
+      failed,
+      results: finalResults,
+      message: `${succeeded}/${finalResults.length} laporan batch berhasil disimpan ke Si-Pangaduan!`,
+    };
+  }
+
+  const results = [...(luniteActiveBatchReviewSession.results || [])];
+  for (let i = currentIndex; i < preparedItems.length; i++) {
     const entry = preparedItems[i];
     console.log(`[*] [Lunar Batch Confirm] Submitting item ${i + 1}/${preparedItems.length}: ${entry.title}`);
     try {
-      // Last item is already populated unless user switched; repopulate cleanly to guarantee exact state
       await lunitePopulatePortalFormOnPage(page, finalPortalUrl, entry.prepared);
       await luniteClickSaveAndConfirmOnPage(page);
       results.push({
@@ -3053,6 +3377,7 @@ export async function luniteConfirmBatchReviewSubmit() {
 
   return {
     success: failed === 0,
+    batchCompleted: true,
     submitted: true,
     total: results.length,
     succeeded,
@@ -3919,23 +4244,61 @@ Rincian Pekerjaan:
 
     // 7. Confirm Review Submit Endpoint
     if (req.method === "POST" && url.pathname === "/api/confirm-review-submit") {
+      const body = await readBody();
       try {
-        const result = await lunarConfirmReviewSubmit();
+        const result = await lunarConfirmReviewSubmit({
+          captchaCode: body?.captchaCode || "",
+        });
         sendJson({ success: true, ...result });
       } catch (err) {
         console.error("[!] Error in /api/confirm-review-submit:", err);
-        sendJson({ success: false, error: err.message }, 500);
+        sendJson(
+          {
+            success: false,
+            error: err.message,
+            retryAvailable: Boolean(err.isPortalValidationError),
+            hasCaptcha: Boolean(err.hasCaptcha),
+            captchaBase64: err.captchaBase64 || "",
+            screenshotBase64: err.screenshotBase64 || "",
+          },
+          err.isPortalValidationError ? 400 : 500,
+        );
       }
       return;
     }
 
     // 7b. Confirm Batch Review Submit Endpoint
     if (req.method === "POST" && url.pathname === "/api/confirm-batch-submit") {
+      const body = await readBody();
       try {
-        const result = await luniteConfirmBatchReviewSubmit();
+        const result = await luniteConfirmBatchReviewSubmit({
+          captchaCode: body?.captchaCode || "",
+        });
         sendJson({ success: true, ...result });
       } catch (err) {
         console.error("[!] Error in /api/confirm-batch-submit:", err);
+        sendJson(
+          {
+            success: false,
+            error: err.message,
+            retryAvailable: Boolean(err.isPortalValidationError),
+            hasCaptcha: Boolean(err.hasCaptcha),
+            captchaBase64: err.captchaBase64 || "",
+            screenshotBase64: err.screenshotBase64 || "",
+          },
+          err.isPortalValidationError ? 400 : 500,
+        );
+      }
+      return;
+    }
+
+    // 7c. Refresh Active Review CAPTCHA Endpoint
+    if (req.method === "POST" && url.pathname === "/api/refresh-review-captcha") {
+      try {
+        const result = await luniteRefreshActiveReviewCaptcha();
+        sendJson({ success: true, ...result });
+      } catch (err) {
+        console.error("[!] Error in /api/refresh-review-captcha:", err);
         sendJson({ success: false, error: err.message }, 500);
       }
       return;

@@ -989,6 +989,61 @@
             box-shadow: var(--shadow-elevation-1);
             border: none;
         }
+
+        /* Lunite Review CAPTCHA Panel (Zero-Border Surface Law) */
+        .lunite-review-captcha-panel {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            background: var(--bg-elevated);
+            border: none;
+            border-radius: 14px;
+            padding: 12px 16px;
+            box-shadow: var(--shadow-elevation-2);
+        }
+
+        .lunite-review-captcha-img-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-sunken);
+            padding: 6px 10px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-sunken);
+        }
+
+        .lunite-review-captcha-img {
+            height: 54px;
+            width: auto;
+            border-radius: 6px;
+            background: #f8fafc;
+            display: block;
+        }
+
+        .lunite-review-captcha-input {
+            width: 190px;
+            padding: 10px 14px;
+            border: none;
+            border-radius: 10px;
+            background: var(--bg-sunken);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-align: center;
+            box-shadow: var(--shadow-sunken);
+            outline: none;
+            transition: box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .lunite-review-captcha-input:focus {
+            background: rgba(28, 22, 42, 0.98);
+            box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.45), var(--shadow-sunken);
+        }
     </style>
 </head>
 
@@ -1774,6 +1829,23 @@
                 </div>
                 <div id="review-viewport-container" style="max-height: 56vh; overflow-y: auto; overflow-x: auto; text-align: center; padding: 12px; background: #07060c;">
                     <img id="review-screenshot-img" src="" alt="Pratinjau Formulir Si-Pangaduan" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.6); transition: all 0.2s ease;" />
+                </div>
+            </div>
+
+            <!-- Manual CAPTCHA Verification Panel (visible when portal requires #captcha_code) -->
+            <div id="lunite-review-captcha-panel" class="lunite-review-captcha-panel">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <span id="lunite-review-captcha-step-label" style="font-size: 12.5px; font-weight: 700; color: #f8fafc;">🛡️ Verifikasi Keamanan (CAPTCHA)</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Ketik 6 karakter dari gambar di samping sebelum konfirmasi simpan.</span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px;">
+                    <div class="lunite-review-captcha-img-wrap">
+                        <img id="lunite-review-captcha-img" class="lunite-review-captcha-img" src="" alt="CAPTCHA Si-Pangaduan" />
+                        <button type="button" class="btn btn-secondary" id="btn-refresh-review-captcha" style="padding: 6px 10px; font-size: 11px;" onclick="luniteRefreshReviewCaptcha()">
+                            🔄 Muat Ulang
+                        </button>
+                    </div>
+                    <input type="text" id="lunite-review-captcha-input" class="lunite-review-captcha-input" maxlength="6" placeholder="KODE" autocomplete="off" />
                 </div>
             </div>
 
@@ -4989,7 +5061,7 @@
                 modal.style.display = 'none';
 
                 if (result.batchReviewMode && Array.isArray(result.previews)) {
-                    luniteOpenBatchReviewModal(result.previews);
+                    luniteOpenBatchReviewModal(result);
                     document.getElementById('footer-status').textContent = `🔍 Preview ${result.previews.length} laporan batch siap diperiksa!`;
                 } else if (Array.isArray(result.results)) {
                     result.results.forEach((r) => {
@@ -5088,6 +5160,81 @@
 
         // 9b. Remote Review Modal Handlers (Single & Batch)
         let isReviewZoomed = false;
+        let luniteReviewHasCaptcha = false;
+
+        function luniteSetReviewCaptchaState(hasCaptcha, captchaBase64 = '', stepLabel = '') {
+            luniteReviewHasCaptcha = Boolean(hasCaptcha);
+            const panel = document.getElementById('lunite-review-captcha-panel');
+            const img = document.getElementById('lunite-review-captcha-img');
+            const input = document.getElementById('lunite-review-captcha-input');
+            const labelEl = document.getElementById('lunite-review-captcha-step-label');
+
+            if (!panel) return;
+            if (luniteReviewHasCaptcha) {
+                panel.style.display = 'flex';
+                if (img && captchaBase64) {
+                    img.src = captchaBase64;
+                }
+                if (labelEl) {
+                    labelEl.textContent = stepLabel || '🛡️ Verifikasi Keamanan (CAPTCHA)';
+                }
+                if (input) {
+                    input.value = '';
+                    setTimeout(() => input.focus(), 80);
+                }
+            } else {
+                panel.style.display = 'none';
+                if (img) img.src = '';
+                if (input) input.value = '';
+            }
+        }
+
+        async function luniteRefreshReviewCaptcha() {
+            const refreshBtn = document.getElementById('btn-refresh-review-captcha');
+            const img = document.getElementById('review-screenshot-img');
+            const fullLink = document.getElementById('review-full-link');
+            const input = document.getElementById('lunite-review-captcha-input');
+            const originalLabel = refreshBtn ? refreshBtn.innerHTML : '🔄 Muat Ulang';
+
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '⏳...';
+            }
+
+            try {
+                const res = await fetch('/api/refresh-review-captcha', { method: 'POST' });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'Gagal memuat ulang CAPTCHA.');
+                }
+
+                const stepLabel = luniteBatchReviewState
+                    ? `🛡️ Verifikasi CAPTCHA — Laporan #${luniteBatchReviewState.activeSubmitIndex + 1} / ${luniteBatchReviewState.previews.length}`
+                    : '🛡️ Verifikasi Keamanan (CAPTCHA)';
+                luniteSetReviewCaptchaState(Boolean(data.hasCaptcha), data.captchaBase64 || '', stepLabel);
+
+                if (data.screenshotBase64) {
+                    if (luniteBatchReviewState && luniteBatchReviewState.previews[luniteBatchReviewState.activeSubmitIndex]) {
+                        luniteBatchReviewState.previews[luniteBatchReviewState.activeSubmitIndex].screenshotBase64 = data.screenshotBase64;
+                        if (luniteBatchReviewState.activeIndex === luniteBatchReviewState.activeSubmitIndex) {
+                            if (img) img.src = data.screenshotBase64;
+                            if (fullLink) fullLink.href = data.screenshotBase64;
+                        }
+                    } else {
+                        if (img) img.src = data.screenshotBase64;
+                        if (fullLink) fullLink.href = data.screenshotBase64;
+                    }
+                }
+                if (input) input.focus();
+            } catch (err) {
+                alert('Gagal memuat ulang CAPTCHA: ' + err.message);
+            } finally {
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = originalLabel;
+                }
+            }
+        }
 
         function toggleReviewZoom() {
             const img = document.getElementById('review-screenshot-img');
@@ -5161,17 +5308,39 @@
 
             luniteRenderReviewMetaBadges(result.meta);
             modal.style.display = 'flex';
+            luniteSetReviewCaptchaState(Boolean(result.hasCaptcha), result.captchaBase64 || '');
         }
 
-        function luniteOpenBatchReviewModal(previews) {
+        function luniteOpenBatchReviewModal(dataOrPreviews) {
+            const isObj = dataOrPreviews && !Array.isArray(dataOrPreviews);
+            const previews = isObj ? (dataOrPreviews.previews || []) : (dataOrPreviews || []);
             if (!Array.isArray(previews) || !previews.length) return;
-            luniteBatchReviewState = { previews, activeIndex: 0 };
+
+            const activeSubmitIndex = isObj ? (dataOrPreviews.currentIndex || 0) : 0;
+            const hasCaptcha = isObj ? Boolean(dataOrPreviews.hasCaptcha) : false;
+            const captchaBase64 = isObj ? (dataOrPreviews.captchaBase64 || '') : '';
+
+            luniteBatchReviewState = {
+                previews,
+                activeIndex: activeSubmitIndex,
+                activeSubmitIndex,
+                submittedIndices: new Set(),
+            };
             const batchBar = document.getElementById('lunite-batch-review-bar');
             if (batchBar) batchBar.style.display = 'flex';
             const confirmBtn = document.getElementById('btn-confirm-remote-review');
-            if (confirmBtn) confirmBtn.innerHTML = `🚀 Konfirmasi & Simpan Semua (${previews.length})`;
+            if (confirmBtn) {
+                confirmBtn.innerHTML = hasCaptcha
+                    ? `🚀 Konfirmasi & Simpan (${activeSubmitIndex + 1}/${previews.length})`
+                    : `🚀 Konfirmasi & Simpan Semua (${previews.length})`;
+            }
 
-            luniteShowBatchReviewIndex(0);
+            luniteSetReviewCaptchaState(
+                hasCaptcha,
+                captchaBase64,
+                `🛡️ Verifikasi CAPTCHA — Laporan #${activeSubmitIndex + 1} / ${previews.length}`,
+            );
+            luniteShowBatchReviewIndex(activeSubmitIndex);
             document.getElementById('modal-remote-review').style.display = 'flex';
         }
 
@@ -5195,12 +5364,18 @@
                 counter.textContent = `Laporan ${safeIdx + 1} / ${total}`;
             }
             if (pills) {
-                pills.innerHTML = luniteBatchReviewState.previews.map((p, i) => `
-                    <button type="button" class="btn-mini ${i === safeIdx ? 'btn-mini-primary' : 'btn-mini-secondary'}"
-                        style="padding:3px 9px; font-size:10.5px;" onclick="luniteShowBatchReviewIndex(${i})">
-                        #${i + 1}
-                    </button>
-                `).join('');
+                const submittedSet = luniteBatchReviewState.submittedIndices || new Set();
+                pills.innerHTML = luniteBatchReviewState.previews.map((p, i) => {
+                    const isDone = submittedSet.has(i);
+                    const isActiveSubmit = luniteBatchReviewState.activeSubmitIndex === i && !isDone;
+                    const prefix = isDone ? '✅ ' : (isActiveSubmit && luniteReviewHasCaptcha ? '🎯 ' : '');
+                    return `
+                        <button type="button" class="btn-mini ${i === safeIdx ? 'btn-mini-primary' : 'btn-mini-secondary'}"
+                            style="padding:3px 9px; font-size:10.5px;" onclick="luniteShowBatchReviewIndex(${i})">
+                            ${prefix}#${i + 1}
+                        </button>
+                    `;
+                }).join('');
             }
             luniteRenderReviewMetaBadges(current.meta);
         }
@@ -5214,6 +5389,7 @@
             const modal = document.getElementById('modal-remote-review');
             modal.style.display = 'none';
             luniteBatchReviewState = null;
+            luniteSetReviewCaptchaState(false, '');
             try {
                 await fetch('/api/cancel-review', { method: 'POST' });
             } catch (_) {}
@@ -5223,24 +5399,60 @@
         async function confirmRemoteSubmit() {
             const confirmBtn = document.getElementById('btn-confirm-remote-review');
             const cancelBtn = document.getElementById('btn-cancel-remote-review');
+            const captchaInput = document.getElementById('lunite-review-captcha-input');
+            const captchaCode = captchaInput ? captchaInput.value.trim().toUpperCase() : '';
+
+            if (luniteReviewHasCaptcha && !captchaCode) {
+                alert('Silakan ketik kode CAPTCHA terlebih dahulu sebelum konfirmasi simpan.');
+                if (captchaInput) captchaInput.focus();
+                return;
+            }
+
             const originalText = confirmBtn.innerHTML;
             const isBatch = Boolean(luniteBatchReviewState);
 
             confirmBtn.disabled = true;
             cancelBtn.disabled = true;
             confirmBtn.innerHTML = isBatch
-                ? `⏳ Menyimpan ${luniteBatchReviewState.previews.length} Laporan...`
+                ? (luniteReviewHasCaptcha
+                    ? `⏳ Menyimpan Laporan #${luniteBatchReviewState.activeSubmitIndex + 1}/${luniteBatchReviewState.previews.length}...`
+                    : `⏳ Menyimpan ${luniteBatchReviewState.previews.length} Laporan...`)
                 : '⏳ Menyimpan ke Si-Pangaduan...';
+
+            let nextSubmitBtnLabel = originalText;
 
             try {
                 const endpoint = isBatch ? '/api/confirm-batch-submit' : '/api/confirm-review-submit';
                 const res = await fetch(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ captchaCode })
                 });
                 const result = await res.json();
 
-                if (isBatch && Array.isArray(result.results)) {
+                if (isBatch && result.success && result.batchCompleted === false) {
+                    if (luniteBatchQueue[result.submittedIndex]) {
+                        luniteBatchQueue[result.submittedIndex].status = 'sent';
+                        luniteBatchQueue[result.submittedIndex].statusMessage = '✅ Terkirim';
+                        luniteSaveBatchQueueToStorage();
+                        luniteRenderBatchQueue();
+                    }
+                    luniteBatchReviewState.submittedIndices.add(result.submittedIndex);
+                    luniteBatchReviewState.activeSubmitIndex = result.nextIndex;
+                    if (luniteBatchReviewState.previews[result.nextIndex] && result.screenshotBase64) {
+                        luniteBatchReviewState.previews[result.nextIndex].screenshotBase64 = result.screenshotBase64;
+                    }
+                    luniteShowBatchReviewIndex(result.nextIndex);
+                    luniteSetReviewCaptchaState(
+                        Boolean(result.hasCaptcha),
+                        result.captchaBase64 || '',
+                        `🛡️ Verifikasi CAPTCHA — Laporan #${result.nextIndex + 1} / ${result.total}`,
+                    );
+                    nextSubmitBtnLabel = result.hasCaptcha
+                        ? `🚀 Konfirmasi & Simpan (${result.nextIndex + 1}/${result.total})`
+                        : `🚀 Konfirmasi & Simpan Semua`;
+                    document.getElementById('footer-status').textContent = result.message || `✅ Laporan #${result.submittedIndex + 1} tersimpan. Lanjut #${result.nextIndex + 1}.`;
+                } else if (isBatch && result.success && Array.isArray(result.results)) {
                     result.results.forEach((r) => {
                         if (luniteBatchQueue[r.index]) {
                             luniteBatchQueue[r.index].status = r.success ? 'sent' : 'error';
@@ -5251,13 +5463,30 @@
                     luniteRenderBatchQueue();
                     document.getElementById('modal-remote-review').style.display = 'none';
                     luniteBatchReviewState = null;
+                    luniteSetReviewCaptchaState(false, '');
                     document.getElementById('footer-status').textContent = result.message || '✅ Batch berhasil disimpan!';
                     alert(`🎉 ${result.message || 'Semua laporan batch berhasil disimpan!'}`);
-                } else if (result.success) {
+                } else if (!isBatch && result.success) {
                     document.getElementById('modal-remote-review').style.display = 'none';
+                    luniteSetReviewCaptchaState(false, '');
                     document.getElementById('footer-status').textContent = '✅ Formulir Berhasil Disimpan!';
                     alert('🎉 Sukses! Formulir Si-Pangaduan telah berhasil disimpan secara remote.');
                 } else {
+                    if (result.retryAvailable) {
+                        const stepLabel = isBatch && luniteBatchReviewState
+                            ? `🛡️ Verifikasi CAPTCHA — Laporan #${luniteBatchReviewState.activeSubmitIndex + 1} / ${luniteBatchReviewState.previews.length}`
+                            : '🛡️ Verifikasi Keamanan (CAPTCHA)';
+                        luniteSetReviewCaptchaState(Boolean(result.hasCaptcha), result.captchaBase64 || '', stepLabel);
+                        if (result.screenshotBase64) {
+                            const previewImg = document.getElementById('review-screenshot-img');
+                            const fullLink = document.getElementById('review-full-link');
+                            if (isBatch && luniteBatchReviewState && luniteBatchReviewState.previews[luniteBatchReviewState.activeSubmitIndex]) {
+                                luniteBatchReviewState.previews[luniteBatchReviewState.activeSubmitIndex].screenshotBase64 = result.screenshotBase64;
+                            }
+                            if (previewImg) previewImg.src = result.screenshotBase64;
+                            if (fullLink) fullLink.href = result.screenshotBase64;
+                        }
+                    }
                     alert('Gagal menyimpan: ' + (result.error || 'Terjadi kesalahan'));
                 }
             } catch (err) {
@@ -5265,9 +5494,16 @@
             } finally {
                 confirmBtn.disabled = false;
                 cancelBtn.disabled = false;
-                confirmBtn.innerHTML = originalText;
+                confirmBtn.innerHTML = nextSubmitBtnLabel;
             }
         }
+
+        document.getElementById('lunite-review-captcha-input')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmRemoteSubmit();
+            }
+        });
 
         fetchInitialData();
 
